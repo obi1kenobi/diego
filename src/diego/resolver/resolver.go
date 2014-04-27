@@ -14,7 +14,7 @@ Resolver - The main resolver object that this framework provides.
 type Resolver struct {
   currentState State
   trailingState State
-  log *list.List
+  log *list.List // in order of oldest transaction (Front) to newest transaction (Back)
   trailingDistance int
 }
 
