@@ -3,7 +3,7 @@ package resolver
 import "container/list"
 
 /*
-The maximum distance between the current and the trailing state.
+The default maximum distance between the current and the trailing state.
 */
 const DefaultTrailingDistance = 1000
 
