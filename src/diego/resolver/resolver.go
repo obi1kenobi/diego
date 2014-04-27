@@ -1,6 +1,7 @@
 package resolver
 
 import "container/list"
+import "diego/debug"
 
 /*
 The default maximum distance between the current and the trailing state.
@@ -32,26 +33,26 @@ func CreateResolver(makeState func()State, trailingDistance int) *Resolver {
 }
 
 func (rs *Resolver) appendTransaction(t *Transaction) {
-  Assert(rs.log.Len() <= rs.trailingDistance,
+  debug.Assert(rs.log.Len() <= rs.trailingDistance,
          "Log length %s > trailing distance %s",
-         Stringify(rs.log.Len()), Stringify(rs.trailingDistance))
+         debug.Stringify(rs.log.Len()), debug.Stringify(rs.trailingDistance))
 
   if rs.log.Len() == rs.trailingDistance {
     sid := rs.trailingState.Id()
     oldT := rs.log.Back().Value.(*Transaction)
     oldtrid := (*oldT).Id()
 
-    Assert(sid == oldtrid,
+    debug.Assert(sid == oldtrid,
            "Id mismatch: sid %s != oldtrid %s",
-           Stringify(sid), Stringify(oldtrid))
+           debug.Stringify(sid), debug.Stringify(oldtrid))
 
     // the log is full, first apply a transaction to the trailing state
     ok, _ := rs.trailingState.Apply(oldT)
     rs.trailingState.SetId(sid + 1)
 
-    Assert(ok,
-           "Failed to apply transaction %s to trailing state %s",
-           Stringify(rs.log.Back().Value), Stringify(rs.trailingState))
+    debug.Assert(ok,
+                 "Failed to apply transaction %s to trailing state %s",
+                 debug.Stringify(rs.log.Back().Value), debug.Stringify(rs.trailingState))
 
     rs.log.Remove(rs.log.Back())
   }
@@ -60,9 +61,9 @@ func (rs *Resolver) appendTransaction(t *Transaction) {
 }
 
 func assertRecentTransaction(s *State, t *Transaction) {
-  Assert((*s).Id() == (*t).Id(),
-         "Transaction %s not recent relative to state %s",
-         Stringify(t), Stringify(s))
+  debug.Assert((*s).Id() == (*t).Id(),
+               "Transaction %s not recent relative to state %s",
+               debug.Stringify(t), debug.Stringify(s))
 }
 
 func (rs *Resolver) transactionSuccess(t *Transaction) (bool, *Transaction) {
@@ -91,9 +92,9 @@ func (rs *Resolver) SubmitTransaction(t *Transaction) (bool, *Transaction) {
   if trid == sid {
     ok, newT := rs.currentState.Apply(t)
 
-    Assert(ok,
-           "Current transaction %s failed to apply against current state %s",
-           Stringify(t), Stringify(rs.currentState))
+    debug.Assert(ok,
+                 "Current transaction %s failed to apply against current state %s",
+                 debug.Stringify(t), debug.Stringify(rs.currentState))
 
     return rs.transactionSuccess(newT)
   }
@@ -117,9 +118,9 @@ func (rs *Resolver) SubmitTransaction(t *Transaction) (bool, *Transaction) {
 
       ok, newT = rs.currentState.Apply(newT)
 
-      Assert(ok,
-             "Failed to apply transaction %s that was resolved successfully against state %s",
-             Stringify(t), Stringify(rs.currentState))
+      debug.Assert(ok,
+        "Failed to apply transaction %s that was resolved successfully against state %s",
+        debug.Stringify(t), debug.Stringify(rs.currentState))
 
       return rs.transactionSuccess(newT)
     }
@@ -144,8 +145,8 @@ func (rs *Resolver) SubmitTransaction(t *Transaction) (bool, *Transaction) {
     return false, nil
   }
 
-  Assert(false,
-         "Unreachable case in SubmitTransaction: trid=%s tsid=%s sid=%s",
-         Stringify(trid), Stringify(tsid), Stringify(sid))
+  debug.Assert(false,
+               "Unreachable case in SubmitTransaction: trid=%s tsid=%s sid=%s",
+               debug.Stringify(trid), debug.Stringify(tsid), debug.Stringify(sid))
   return false, nil
 }
