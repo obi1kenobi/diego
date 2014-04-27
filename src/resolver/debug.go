@@ -4,6 +4,7 @@ import "fmt"
 
 const debugLevel = 0
 const maxStringifyLength = 500
+const stringifyPreviewLength = 20
 
 /*
 Stringify - return the text representation of the value, or placeholder if too long
@@ -11,7 +12,7 @@ Stringify - return the text representation of the value, or placeholder if too l
 func Stringify(value interface{}) string {
   debugv := fmt.Sprintf("%v", value)
   if len(debugv) > maxStringifyLength {
-    debugv = "<too long>"
+    debugv = debugv[0:stringifyPreviewLength] + "...<too long>"
   }
   return debugv
 }
@@ -29,8 +30,9 @@ func DPrintf(level int, format string, a ...interface{}) (n int, err error) {
 /*
 Assert - if condition is false, panic with specified message
 */
-func Assert(cond bool, str string) {
+func Assert(cond bool, format string, a ...interface{}) {
   if !cond {
-    panic(str)
+    debugv := fmt.Sprintf(format, a...)
+    panic(debugv)
   }
 }

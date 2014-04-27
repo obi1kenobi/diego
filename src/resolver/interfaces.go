@@ -16,5 +16,5 @@ type State interface {
   SetId(id int64)
   Id() int64
   Apply(t *Transaction) (bool, *Transaction)
-  Resolve(oldState *State, log *list.List, current *Transaction) (bool, *Transaction)
+  Resolve(ancestorState *State, log *list.List, current *Transaction) (bool, *Transaction)
 }
