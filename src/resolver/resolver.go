@@ -27,6 +27,7 @@ func CreateResolver(makeState func()State, trailingDistance int) *Resolver {
   rs.currentState.SetId(0)
   rs.trailingState.SetId(0)
   rs.trailingDistance = trailingDistance
+  rs.log = new(list.List)
   return rs
 }
 
