@@ -32,15 +32,15 @@ func CreateResolver(makeState func()State, trailingDistance int) *Resolver {
   return rs
 }
 
-func (rs *Resolver) appendTransaction(t *Transaction) {
+func (rs *Resolver) appendTransaction(t Transaction) {
   debug.Assert(rs.log.Len() <= rs.trailingDistance,
          "Log length %s > trailing distance %s",
          debug.Stringify(rs.log.Len()), debug.Stringify(rs.trailingDistance))
 
   if rs.log.Len() == rs.trailingDistance {
     sid := rs.trailingState.Id()
-    oldT := rs.log.Back().Value.(*Transaction)
-    oldtrid := (*oldT).Id()
+    oldT := rs.log.Front().Value.(Transaction)
+    oldtrid := oldT.Id()
 
     debug.Assert(sid == oldtrid,
            "Id mismatch: sid %s != oldtrid %s",
@@ -52,21 +52,21 @@ func (rs *Resolver) appendTransaction(t *Transaction) {
 
     debug.Assert(ok,
                  "Failed to apply transaction %s to trailing state %s",
-                 debug.Stringify(rs.log.Back().Value), debug.Stringify(rs.trailingState))
+                 debug.Stringify(rs.log.Front().Value), debug.Stringify(rs.trailingState))
 
-    rs.log.Remove(rs.log.Back())
+    rs.log.Remove(rs.log.Front())
   }
 
-  rs.log.PushFront(t)
+  rs.log.PushBack(t)
 }
 
-func assertRecentTransaction(s *State, t *Transaction) {
-  debug.Assert((*s).Id() == (*t).Id(),
+func assertRecentTransaction(s *State, t Transaction) {
+  debug.Assert((*s).Id() == t.Id(),
                "Transaction %s not recent relative to state %s",
                debug.Stringify(t), debug.Stringify(s))
 }
 
-func (rs *Resolver) transactionSuccess(t *Transaction) (bool, *Transaction) {
+func (rs *Resolver) transactionSuccess(t Transaction) (bool, Transaction) {
   assertRecentTransaction(&rs.currentState, t)
 
   rs.currentState.SetId(rs.currentState.Id() + 1)
@@ -79,8 +79,8 @@ SubmitTransaction - Ask the resolver to apply a transaction.
   Returns success/failure, and the transaction as it looked when committed
   (committed transaction may be different than transaction passed in)
 */
-func (rs *Resolver) SubmitTransaction(t *Transaction) (bool, *Transaction) {
-  trid := (*t).Id()
+func (rs *Resolver) SubmitTransaction(t Transaction) (bool, Transaction) {
+  trid := t.Id()
   sid := rs.currentState.Id()
   tsid := rs.trailingState.Id()
 
