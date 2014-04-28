@@ -58,6 +58,30 @@ func (op *flipflopAddOp) Id() int64 {
   return op.id
 }
 
+func (kv *kvStore) Equals(kv2 *kvStore) bool {
+  if kv.id != kv2.id {
+    return false
+  }
+
+  // ensure all elements in kv are in kv2
+  for k, v := range kv.data {
+    v2, ok := kv2.data[k]
+    if !ok || v != v2 {
+      return false
+    }
+  }
+
+  // ensure all elements in kv2 are in kv
+  for k, v2 := range kv2.data {
+    v, ok := kv.data[k]
+    if !ok || v != v2 {
+      return false
+    }
+  }
+
+  return true
+}
+
 func (kv *kvStore) SetId(id int64) {
   kv.id = id
 }

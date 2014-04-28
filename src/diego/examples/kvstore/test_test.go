@@ -58,6 +58,16 @@ func expectNoNewTransactions(t *testing.T, rs *resolver.Resolver, expid int64) {
   }
 }
 
+func expectConvergedState(t *testing.T, rs *resolver.Resolver, kv *kvStore) {
+  callback := func(state resolver.State) {
+    kv2 := state.(*kvStore)
+    if !kv.Equals(kv2) {
+      t.Fatalf("State mismatch: kv=%s; kv2=%s", debug.Stringify(kv), debug.Stringify(kv2))
+    }
+  }
+  rs.CurrentState(callback)
+}
+
 func TestLwwSet(t *testing.T) {
   rs, s := setup()
 
@@ -82,6 +92,7 @@ func TestLwwSet(t *testing.T) {
   expectSubmitSuccess(t, rs, lww, "LwwSetOp", s)
   expectKeyValue(t, s, "a", "def")
   expectNoNewTransactions(t, rs, s.id)
+  expectConvergedState(t, rs, s)
 }
 
 func TestOptimisticSet(t *testing.T) {
@@ -108,6 +119,7 @@ func TestOptimisticSet(t *testing.T) {
   expectSubmitSuccess(t, rs, opt, "OptimisticSetOp", s)
   expectKeyValue(t, s, "a", "abcd")
   expectNoNewTransactions(t, rs, s.id)
+  expectConvergedState(t, rs, s)
 }
 
 func TestAppend(t *testing.T) {
@@ -134,6 +146,7 @@ func TestAppend(t *testing.T) {
   expectSubmitSuccess(t, rs, app, "AppendOp", s)
   expectKeyValue(t, s, "a", "bcdef")
   expectNoNewTransactions(t, rs, s.id)
+  expectConvergedState(t, rs, s)
 }
 
 func TestFlipflopAdd(t *testing.T) {
@@ -160,4 +173,5 @@ func TestFlipflopAdd(t *testing.T) {
   expectSubmitSuccess(t, rs, ff, "FlipflopAddOp", s)
   expectKeyValue(t, s, "a", "0")
   expectNoNewTransactions(t, rs, s.id)
+  expectConvergedState(t, rs, s)
 }
