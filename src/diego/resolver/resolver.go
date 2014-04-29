@@ -1,5 +1,6 @@
 package resolver
 
+import "sync"
 import "container/list"
 import "diego/debug"
 
@@ -12,9 +13,11 @@ const DefaultTrailingDistance = 1000
 Resolver - The main resolver object that this framework provides.
 */
 type Resolver struct {
+  mu sync.RWMutex
   currentState State
   trailingState State
   log *list.List // in order of oldest transaction (Front) to newest transaction (Back)
+  transactionIdLookup map[int64]*list.Element
   trailingDistance int
 }
 
@@ -29,6 +32,7 @@ func CreateResolver(makeState func()State, trailingDistance int) *Resolver {
   rs.trailingState.SetId(0)
   rs.trailingDistance = trailingDistance
   rs.log = new(list.List)
+  rs.transactionIdLookup = make(map[int64]*list.Element)
   return rs
 }
 
@@ -54,10 +58,12 @@ func (rs *Resolver) appendTransaction(t Transaction) {
                  "Failed to apply transaction %s to trailing state %s",
                  debug.Stringify(rs.log.Front().Value), debug.Stringify(rs.trailingState))
 
+    delete(rs.transactionIdLookup, oldtrid)
     rs.log.Remove(rs.log.Front())
   }
 
   rs.log.PushBack(t)
+  rs.transactionIdLookup[t.Id()] = rs.log.Back()
 }
 
 func assertRecentTransaction(s *State, t Transaction) {
@@ -75,11 +81,67 @@ func (rs *Resolver) transactionSuccess(t Transaction) (bool, Transaction) {
 }
 
 /*
+TransactionsSinceId - Returns the current state id and a slice of all transactions
+  at or after the specified id to the current state. The expectation is that this function
+  will not be called with an id argument that is "too old".
+
+  If the id is smaller than the id of the trailing state, no Transactions are returned.
+  If the id is not smaller than the id of the trailing state, but is still "old", then this
+    function call may be expensive.
+*/
+func (rs *Resolver) TransactionsSinceId(id int64) (int64, []Transaction) {
+  rs.mu.RLock()
+  defer rs.mu.RUnlock()
+
+  sid := rs.currentState.Id()
+  tcount := sid - id
+  if tcount <= 0 {
+    return sid, nil
+  }
+
+  transactions := make([]Transaction, tcount)
+  elem := rs.transactionIdLookup[id]
+  transactions[0] = elem.Value.(Transaction)
+  for i := id + 1; i < sid; i++ {
+    elem = elem.Next()
+    transactions[i - id] = elem.Value.(Transaction)
+  }
+  return sid, transactions
+}
+
+/*
+CurrentStateId - Returns the id of the current state
+*/
+func (rs *Resolver) CurrentStateId() int64 {
+  rs.mu.RLock()
+  defer rs.mu.RUnlock()
+
+  return rs.currentState.Id()
+}
+
+/*
+CurrentState - Calls the specified callback with the current state as its argument.
+  Made to accept a callback so it can enforce proper concurrency control -- the readers' lock
+  is held for the duration of the callback execution.
+
+  The callback *MUST NOT* modify any field in the State!
+*/
+func (rs *Resolver) CurrentState(callback func(State)) {
+  rs.mu.RLock()
+  defer rs.mu.RUnlock()
+
+  callback(rs.currentState)
+}
+
+/*
 SubmitTransaction - Ask the resolver to apply a transaction.
   Returns success/failure, and the transaction as it looked when committed
   (committed transaction may be different than transaction passed in)
 */
 func (rs *Resolver) SubmitTransaction(t Transaction) (bool, Transaction) {
+  rs.mu.Lock()
+  defer rs.mu.Unlock()
+
   trid := t.Id()
   sid := rs.currentState.Id()
   tsid := rs.trailingState.Id()
