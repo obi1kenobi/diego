@@ -20,10 +20,10 @@ func TestOptimisticSet(t *testing.T) {
   rs, s := setup()
 
   testData := []tests.TestDataItem {
-    tests.MakeTestDataItem(&optimisticSetOp{0, "a", "b"}, true, keyValuePredicate("a", "b")),
-    tests.MakeTestDataItem(&optimisticSetOp{0, "a", "c"}, false, keyValuePredicate("a", "b")),
-    tests.MakeTestDataItem(&optimisticSetOp{1, "a", "c"}, true, keyValuePredicate("a", "c")),
-    tests.MakeTestDataItem(&optimisticSetOp{2, "a", "abcd"}, true, keyValuePredicate("a", "abcd")),
+    tests.MakeTestDataItem(&pessimisticSetOp{0, "a", "b"}, true, keyValuePredicate("a", "b")),
+    tests.MakeTestDataItem(&pessimisticSetOp{0, "a", "c"}, false, keyValuePredicate("a", "b")),
+    tests.MakeTestDataItem(&pessimisticSetOp{1, "a", "c"}, true, keyValuePredicate("a", "c")),
+    tests.MakeTestDataItem(&pessimisticSetOp{2, "a", "abcd"}, true, keyValuePredicate("a", "abcd")),
   }
 
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
