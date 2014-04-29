@@ -10,8 +10,6 @@ RunSequentialTest - Test harness for sequential tests
   data = TestDataItems to use
   s = the initial resolver.State upon which to apply resolved transactions
   equals = function that determines if two copies of the state are the same
-
-  Precondition: len(ops) == len(submitSuccess)
 */
 func RunSequentialTest(t *testing.T, rs *resolver.Resolver,
                        data []TestDataItem, s resolver.State,
