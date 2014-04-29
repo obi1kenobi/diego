@@ -21,15 +21,15 @@ func (op *lwwSetOp) Id() int64 {
   return op.id
 }
 
-// optimistic concurrency set op
-// rejected if not against latest state
-type optimisticSetOp struct {
+// op that is rejected if not against latest state
+// (pessimistically assumes that any unseen transactions taint the state)
+type pessimisticSetOp struct {
   id int64
   key string
   value string
 }
 
-func (op *optimisticSetOp) Id() int64 {
+func (op *pessimisticSetOp) Id() int64 {
   return op.id
 }
 
@@ -96,7 +96,7 @@ func (kv *kvStore) applyLwwSet(x *lwwSetOp) (bool, resolver.Transaction) {
   return true, x
 }
 
-func (kv *kvStore) applyOptimisticSet(x *optimisticSetOp) (bool, resolver.Transaction) {
+func (kv *kvStore) applyPessimisticSet(x *pessimisticSetOp) (bool, resolver.Transaction) {
   if kv.id == x.id {
     kv.data[x.key] = x.value
     return true, x
@@ -138,8 +138,8 @@ func (kv *kvStore) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
   switch x := t.(type) {
   case *lwwSetOp:
     return kv.applyLwwSet(x)
-  case *optimisticSetOp:
-    return kv.applyOptimisticSet(x)
+  case *pessimisticSetOp:
+    return kv.applyPessimisticSet(x)
   case *appendOp:
     return kv.applyAppend(x)
   case *flipflopAddOp:
@@ -183,7 +183,7 @@ func (kv *kvStore) Resolve(ancestorState *resolver.State, log *list.List,
   case *lwwSetOp:
     debug.Assert(false, "Shouldn't have to resolve lwwSetOp %s", debug.Stringify(x))
     return false, nil
-  case *optimisticSetOp:
+  case *pessimisticSetOp:
     // always fails if not applied against current state
     return false, nil
   case *appendOp:
