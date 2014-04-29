@@ -150,7 +150,7 @@ func (kv *kvStore) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
   }
 }
 
-func (op *flipflopAddOp) resolve(id int64, log *list.List) (bool, resolver.Transaction) {
+func (op *flipflopAddOp) resolveFlipFlop(id int64, log *list.List) (bool, resolver.Transaction) {
   opnum := op.opnum
   newT := new(flipflopAddOp)
   newT.key = op.key
@@ -190,7 +190,7 @@ func (kv *kvStore) Resolve(ancestorState *resolver.State, log *list.List,
     debug.Assert(false, "Shouldn't have to resolve appendOp %s", debug.Stringify(x))
     return false, nil
   case *flipflopAddOp:
-    return x.resolve(kv.id, log)
+    return x.resolveFlipFlop(kv.id, log)
   default:
     debug.Assert(false, "Unknown transaction type %s", debug.Stringify(current))
     return false, nil
