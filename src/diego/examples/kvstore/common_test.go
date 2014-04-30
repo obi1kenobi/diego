@@ -17,11 +17,11 @@ func makeResolver()*resolver.Resolver {
   return resolver.CreateResolver(makeState, trailingDistance)
 }
 
-func generateRandomData(fns []func(int64, *rand.Rand)resolver.Transaction,
+func generateRandomData(fns []func(int64, *rand.Rand)(resolver.Transaction, tests.TransactionResult),
                         correctId int64, rnd *rand.Rand) tests.TestDataItem {
   choice := rnd.Intn(len(fns))
-  op := fns[choice](correctId, rnd)
-  return tests.MakeTestDataItem(op, tests.NoCheck, nil)
+  op, checkType := fns[choice](correctId, rnd)
+  return tests.MakeTestDataItem(op, checkType, nil)
 }
 
 func generateKey(rnd *rand.Rand) string {
@@ -32,28 +32,28 @@ func generateValue(rnd *rand.Rand) string {
   return generateKey(rnd)
 }
 
-func generateRandomLwwSet(correctId int64, rnd *rand.Rand)resolver.Transaction {
+func generateRandomLwwSet(correctId int64, rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
   return &lwwSetOp{correctId,
                    generateKey(rnd),
-                   generateValue(rnd)}
+                   generateValue(rnd)}, tests.Success
 }
 
-func generateRandomPessimisticSet(correctId int64, rnd *rand.Rand)resolver.Transaction {
+func generateRandomPessimisticSet(correctId int64, rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
   return &pessimisticSetOp{correctId,
                            generateKey(rnd),
-                           generateValue(rnd)}
+                           generateValue(rnd)}, tests.NoCheck
 }
 
-func generateRandomAppend(correctId int64, rnd *rand.Rand)resolver.Transaction {
+func generateRandomAppend(correctId int64, rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
   return &appendOp{correctId,
                    generateKey(rnd),
-                   generateValue(rnd)}
+                   generateValue(rnd)}, tests.NoCheck
 }
 
 func makeTestData(data []tests.TestDataItem, rnd *rand.Rand) {
-  fns := []func(int64, *rand.Rand)resolver.Transaction { generateRandomLwwSet,
-                                                         generateRandomPessimisticSet,
-                                                         generateRandomAppend }
+  fns := []func(int64, *rand.Rand)(resolver.Transaction, tests.TransactionResult) { generateRandomLwwSet,
+                                                                                    generateRandomPessimisticSet,
+                                                                                    generateRandomAppend }
   for i := 0; i < len(data); i++ {
     data[i] = generateRandomData(fns, int64(i), rnd)
   }
