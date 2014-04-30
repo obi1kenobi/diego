@@ -45,7 +45,7 @@ func runTest(t *testing.T, rs *resolver.Resolver,
   return success
 }
 
-const randomTransactionCount = 50
+const randomTransactionCount = 70
 const idRandomizeProbability = 0.8
 const randomSeed = 0
 

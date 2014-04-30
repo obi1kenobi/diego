@@ -17,10 +17,10 @@ func makeResolver()*resolver.Resolver {
   return resolver.CreateResolver(makeState, trailingDistance)
 }
 
-func generateRandomData(fns []func(int64, *rand.Rand)(resolver.Transaction, tests.TransactionResult),
-                        correctId int64, rnd *rand.Rand) tests.TestDataItem {
+func generateRandomData(fns []func(*rand.Rand)(resolver.Transaction, tests.TransactionResult),
+                        rnd *rand.Rand) tests.TestDataItem {
   choice := rnd.Intn(len(fns))
-  op, checkType := fns[choice](correctId, rnd)
+  op, checkType := fns[choice](rnd)
   return tests.MakeTestDataItem(op, checkType, nil)
 }
 
@@ -32,30 +32,33 @@ func generateValue(rnd *rand.Rand) string {
   return generateKey(rnd)
 }
 
-func generateRandomLwwSet(correctId int64, rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
-  return &lwwSetOp{correctId,
+func generateRandomLwwSet(rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
+  // set the transaction id to 0 because it will be set dynamically during the test
+  return &lwwSetOp{0,
                    generateKey(rnd),
                    generateValue(rnd)}, tests.Success
 }
 
-func generateRandomPessimisticSet(correctId int64, rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
-  return &pessimisticSetOp{correctId,
+func generateRandomPessimisticSet(rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
+  // set the transaction id to 0 because it will be set dynamically during the test
+  return &pessimisticSetOp{0,
                            generateKey(rnd),
                            generateValue(rnd)}, tests.NoCheck
 }
 
-func generateRandomAppend(correctId int64, rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
-  return &appendOp{correctId,
+func generateRandomAppend(rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
+  // set the transaction id to 0 because it will be set dynamically during the test
+  return &appendOp{0,
                    generateKey(rnd),
                    generateValue(rnd)}, tests.NoCheck
 }
 
 func makeTestData(data []tests.TestDataItem, rnd *rand.Rand) {
-  fns := []func(int64, *rand.Rand)(resolver.Transaction, tests.TransactionResult) { generateRandomLwwSet,
-                                                                                    generateRandomPessimisticSet,
-                                                                                    generateRandomAppend }
+  fns := []func(*rand.Rand)(resolver.Transaction, tests.TransactionResult) { generateRandomLwwSet,
+                                                                             generateRandomPessimisticSet,
+                                                                             generateRandomAppend }
   for i := 0; i < len(data); i++ {
-    data[i] = generateRandomData(fns, int64(i), rnd)
+    data[i] = generateRandomData(fns, rnd)
   }
 }
 
