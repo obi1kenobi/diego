@@ -54,3 +54,7 @@ func TestFlipflopAdd(t *testing.T) {
 
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
 }
+
+func TestRandomized(t *testing.T) {
+  tests.RunRandomizedSequentialTests(t, makeResolver, makeState, makeTestData, stateEquals)
+}

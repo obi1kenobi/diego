@@ -1,6 +1,7 @@
 package tests
 
 import "testing"
+import "math/rand"
 import "diego/resolver"
 import "diego/debug"
 
@@ -46,6 +47,15 @@ func MakeTestDataItem(op resolver.Transaction, success TransactionResult,
     localStatePredicate = func(*testing.T, resolver.State)bool {return true};
   }
   return TestDataItem{op, success, localStatePredicate}
+}
+
+func randomizeTransactionId(op resolver.Transaction, rnd *rand.Rand) {
+  maxId := op.Id() - 1
+  if maxId > 0 {
+    op.SetId(rnd.Int63n(maxId))
+  } else if maxId == 0 {
+    op.SetId(0)
+  }
 }
 
 func expectConvergedState(t *testing.T, rs *resolver.Resolver, s resolver.State,

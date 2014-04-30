@@ -21,6 +21,10 @@ func (op *lwwSetOp) Id() int64 {
   return op.id
 }
 
+func (op *lwwSetOp) SetId(id int64) {
+  op.id = id
+}
+
 // op that is rejected if not against latest state
 // (pessimistically assumes that any unseen transactions taint the state)
 type pessimisticSetOp struct {
@@ -33,6 +37,10 @@ func (op *pessimisticSetOp) Id() int64 {
   return op.id
 }
 
+func (op *pessimisticSetOp) SetId(id int64) {
+  op.id = id
+}
+
 // append-to-key op
 type appendOp struct {
   id int64
@@ -42,6 +50,10 @@ type appendOp struct {
 
 func (op *appendOp) Id() int64 {
   return op.id
+}
+
+func (op *appendOp) SetId(id int64) {
+  op.id = id
 }
 
 // contrived example of an op that needs the log to get resolved
@@ -56,6 +68,10 @@ type flipflopAddOp struct {
 
 func (op *flipflopAddOp) Id() int64 {
   return op.id
+}
+
+func (op *flipflopAddOp) SetId(id int64) {
+  op.id = id
 }
 
 func (kv *kvStore) Equals(kv2 *kvStore) bool {

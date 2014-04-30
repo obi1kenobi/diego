@@ -17,13 +17,26 @@ RunSequentialTest - Test harness for sequential tests
 func RunSequentialTest(t *testing.T, rs *resolver.Resolver,
                        data []TestDataItem, s resolver.State,
                        equals func(resolver.State, resolver.State)bool) bool {
+  return runTest(t, rs, data, s, equals, false, nil)
+}
 
+func runTest(t *testing.T, rs *resolver.Resolver,
+             data []TestDataItem, s resolver.State,
+             equals func(resolver.State, resolver.State)bool,
+             dynamicTransactionIds bool, rnd *rand.Rand) bool {
   success := true
 
   // oh how I wish Go had the &= operator...
   success = success && expectNoNewTransactions(t, rs, s.Id())
 
   for i := 0; i < len(data); i++ {
+    if dynamicTransactionIds {
+      data[i].op.SetId(s.Id())
+      if rnd.Float32() >= idRandomizeProbability {
+        randomizeTransactionId(data[i].op, rnd)
+      }
+    }
+
     success = success && expectSubmitResult(t, rs, data[i].op, s, data[i].submitSuccess)
     success = success && expectNoNewTransactions(t, rs, s.Id())
     success = success && expectConvergedState(t, rs, s, equals)
@@ -33,6 +46,8 @@ func RunSequentialTest(t *testing.T, rs *resolver.Resolver,
 }
 
 const randomTransactionCount = 50
+const idRandomizeProbability = 0.8
+const randomSeed = 0
 
 /*
 RunRandomizedSequentialTests - Test harness for randomized sequential tests
@@ -49,6 +64,11 @@ func RunRandomizedSequentialTests(t *testing.T,
                                   equals func(resolver.State, resolver.State)bool) {
 
   config := new(quick.Config)
+
+  // uncomment the next line to do 1000 iterations of the random test instead of the default 50
+  // config.MaxCount = 1000
+
+  config.Rand = rand.New(rand.NewSource(randomSeed))
   config.Values = func (args []reflect.Value, rnd *rand.Rand) {
     x := make([]TestDataItem, randomTransactionCount)
     makeTestData(x, rnd)
@@ -57,20 +77,20 @@ func RunRandomizedSequentialTests(t *testing.T,
     args[2] = reflect.ValueOf(makeState())
   }
 
-  testFunc := makeRandomizedTest(t, equals)
+  testFunc := makeRandomizedTest(t, config.Rand, equals)
 
   if err := quick.Check(testFunc, config); err != nil {
     t.Error(err)
   }
 }
 
-func makeRandomizedTest(t *testing.T,
+func makeRandomizedTest(t *testing.T, rnd *rand.Rand,
                         equals func(resolver.State, resolver.State)bool) func(rs *resolver.Resolver,
                                                                               data []TestDataItem,
                                                                               s resolver.State)bool {
 
   f := func(rs *resolver.Resolver, data []TestDataItem, s resolver.State)bool {
-    return RunSequentialTest(t, rs, data, s, equals)
+    return runTest(t, rs, data, s, equals, true, rnd)
   }
   return f
 }
