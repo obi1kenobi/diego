@@ -21,16 +21,24 @@ func (op *lwwSetOp) Id() int64 {
   return op.id
 }
 
-// optimistic concurrency set op
-// rejected if not against latest state
-type optimisticSetOp struct {
+func (op *lwwSetOp) SetId(id int64) {
+  op.id = id
+}
+
+// op that is rejected if not against latest state
+// (pessimistically assumes that any unseen transactions taint the state)
+type pessimisticSetOp struct {
   id int64
   key string
   value string
 }
 
-func (op *optimisticSetOp) Id() int64 {
+func (op *pessimisticSetOp) Id() int64 {
   return op.id
+}
+
+func (op *pessimisticSetOp) SetId(id int64) {
+  op.id = id
 }
 
 // append-to-key op
@@ -42,6 +50,10 @@ type appendOp struct {
 
 func (op *appendOp) Id() int64 {
   return op.id
+}
+
+func (op *appendOp) SetId(id int64) {
+  op.id = id
 }
 
 // contrived example of an op that needs the log to get resolved
@@ -56,6 +68,10 @@ type flipflopAddOp struct {
 
 func (op *flipflopAddOp) Id() int64 {
   return op.id
+}
+
+func (op *flipflopAddOp) SetId(id int64) {
+  op.id = id
 }
 
 func (kv *kvStore) Equals(kv2 *kvStore) bool {
@@ -96,7 +112,7 @@ func (kv *kvStore) applyLwwSet(x *lwwSetOp) (bool, resolver.Transaction) {
   return true, x
 }
 
-func (kv *kvStore) applyOptimisticSet(x *optimisticSetOp) (bool, resolver.Transaction) {
+func (kv *kvStore) applyPessimisticSet(x *pessimisticSetOp) (bool, resolver.Transaction) {
   if kv.id == x.id {
     kv.data[x.key] = x.value
     return true, x
@@ -138,8 +154,8 @@ func (kv *kvStore) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
   switch x := t.(type) {
   case *lwwSetOp:
     return kv.applyLwwSet(x)
-  case *optimisticSetOp:
-    return kv.applyOptimisticSet(x)
+  case *pessimisticSetOp:
+    return kv.applyPessimisticSet(x)
   case *appendOp:
     return kv.applyAppend(x)
   case *flipflopAddOp:
@@ -150,7 +166,7 @@ func (kv *kvStore) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
   }
 }
 
-func (op *flipflopAddOp) resolve(id int64, log *list.List) (bool, resolver.Transaction) {
+func (op *flipflopAddOp) resolveFlipFlop(id int64, log *list.List) (bool, resolver.Transaction) {
   opnum := op.opnum
   newT := new(flipflopAddOp)
   newT.key = op.key
@@ -183,14 +199,14 @@ func (kv *kvStore) Resolve(ancestorState *resolver.State, log *list.List,
   case *lwwSetOp:
     debug.Assert(false, "Shouldn't have to resolve lwwSetOp %s", debug.Stringify(x))
     return false, nil
-  case *optimisticSetOp:
+  case *pessimisticSetOp:
     // always fails if not applied against current state
     return false, nil
   case *appendOp:
     debug.Assert(false, "Shouldn't have to resolve appendOp %s", debug.Stringify(x))
     return false, nil
   case *flipflopAddOp:
-    return x.resolve(kv.id, log)
+    return x.resolveFlipFlop(kv.id, log)
   default:
     debug.Assert(false, "Unknown transaction type %s", debug.Stringify(current))
     return false, nil
