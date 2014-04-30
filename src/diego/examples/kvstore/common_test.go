@@ -24,11 +24,6 @@ func generateRandomData(fns []func(int64, *rand.Rand)resolver.Transaction,
   return tests.MakeTestDataItem(op, tests.NoCheck, nil)
 }
 
-// TODO make this method not always return the correct id
-func generateTransactionId(correctId int64, rnd *rand.Rand) int64 {
-  return correctId
-}
-
 func generateKey(rnd *rand.Rand) string {
   return strconv.Itoa(rnd.Intn(randomKeyspaceSize))
 }
@@ -38,36 +33,27 @@ func generateValue(rnd *rand.Rand) string {
 }
 
 func generateRandomLwwSet(correctId int64, rnd *rand.Rand)resolver.Transaction {
-  return &lwwSetOp{generateTransactionId(correctId, rnd),
+  return &lwwSetOp{correctId,
                    generateKey(rnd),
                    generateValue(rnd)}
 }
 
 func generateRandomPessimisticSet(correctId int64, rnd *rand.Rand)resolver.Transaction {
-  return &pessimisticSetOp{generateTransactionId(correctId, rnd),
+  return &pessimisticSetOp{correctId,
                            generateKey(rnd),
                            generateValue(rnd)}
 }
 
 func generateRandomAppend(correctId int64, rnd *rand.Rand)resolver.Transaction {
-  return &appendOp{generateTransactionId(correctId, rnd),
+  return &appendOp{correctId,
                    generateKey(rnd),
                    generateValue(rnd)}
-}
-
-func generateRandomFlipFlopAdd(correctId int64, rnd *rand.Rand)resolver.Transaction {
-  // TODO: fix this method
-  return &flipflopAddOp{0,
-                        generateKey(rnd),
-                        0,
-                        rnd.Intn(randomKeyspaceSize)}
 }
 
 func makeTestData(data []tests.TestDataItem, rnd *rand.Rand) {
   fns := []func(int64, *rand.Rand)resolver.Transaction { generateRandomLwwSet,
                                                          generateRandomPessimisticSet,
-                                                         generateRandomAppend,
-                                                         generateRandomFlipFlopAdd }
+                                                         generateRandomAppend }
   for i := 0; i < len(data); i++ {
     data[i] = generateRandomData(fns, int64(i), rnd)
   }
