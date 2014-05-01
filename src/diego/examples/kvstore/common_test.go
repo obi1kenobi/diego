@@ -7,7 +7,7 @@ import "diego/resolver"
 import "diego/tests"
 
 const trailingDistance = 50
-const randomKeyspaceSize = 50
+const randomKeyspaceSize = 25
 
 func setup()(*resolver.Resolver, *kvStore) {
   return makeResolver(), makeState().(*kvStore)
@@ -46,6 +46,13 @@ func generateRandomPessimisticSet(rnd *rand.Rand)(resolver.Transaction, tests.Tr
                            generateValue(rnd)}, tests.NoCheck
 }
 
+func generateRandomTestAndSet(rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
+  // set the transaction id to 0 because it will be set dynamically during the test
+  return &testAndSetOp{0,
+                       generateKey(rnd),
+                       generateValue(rnd)}, tests.NoCheck
+}
+
 func generateRandomAppend(rnd *rand.Rand)(resolver.Transaction, tests.TransactionResult) {
   // set the transaction id to 0 because it will be set dynamically during the test
   return &appendOp{0,
@@ -56,7 +63,8 @@ func generateRandomAppend(rnd *rand.Rand)(resolver.Transaction, tests.Transactio
 func makeTestData(data []tests.TestDataItem, rnd *rand.Rand) {
   fns := []func(*rand.Rand)(resolver.Transaction, tests.TransactionResult) { generateRandomLwwSet,
                                                                              generateRandomPessimisticSet,
-                                                                             generateRandomAppend }
+                                                                             generateRandomAppend,
+                                                                             generateRandomTestAndSet }
   for i := 0; i < len(data); i++ {
     data[i] = generateRandomData(fns, rnd)
   }
