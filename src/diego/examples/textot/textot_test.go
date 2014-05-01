@@ -8,7 +8,6 @@ import "diego/resolver"
 
 
 const trailingDistance = 50
-const randomKeyspaceSize = 50
 
 func setup()(*resolver.Resolver, *textState) {
   return makeResolver(), makeState().(*textState)
