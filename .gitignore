@@ -21,3 +21,9 @@ _testmain.go
 
 *.exe
 *.test
+
+bin
+pkg
+src/code.google.com
+src/github.com
+*.swp
