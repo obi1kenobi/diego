@@ -6,14 +6,16 @@ import "bytes"
 import "diego/resolver"
 import "diego/debug"
 
-type idObject struct{
+type idObject struct {
   id int64
 }
 
+/* Id - returns Id */
 func (obj *idObject) Id() int64 {
   return obj.id
 }
 
+/* SetId - returns SetId */
 func (obj *idObject) SetId(id int64) {
   obj.id = id;
 }
@@ -28,6 +30,9 @@ func makeState() resolver.State {
   return result
 }
 
+/*
+ Apply - apply transaction if it's recent enough, otherwise, cancel.
+ */
 func (ts *textState) Apply(action resolver.Transaction) (bool, resolver.Transaction) {
   transform := action.(*textTransform)
   if ts.id != transform.id {
@@ -41,8 +46,11 @@ func (ts *textState) Apply(action resolver.Transaction) (bool, resolver.Transact
   return true, action
 }
 
+/*
+ Resolve - Update transform through the log, then return final transform
+ */
 func (ts *textState) Resolve(ancestorState *resolver.State, log *list.List,
-    current resolver.Transaction) (bool, resolver.Transaction) {
+                             current resolver.Transaction) (bool, resolver.Transaction) {
   var err error
   transform := current.(*textTransform)
   for e := log.Front(); e != nil; e = e.Next() {
@@ -68,6 +76,9 @@ type textOp struct {
   n int
 }
 
+/*
+ String - toString() for go
+ */
 func (op textOp) String() string {
   switch {
   case op.opType == textSkipOp:
@@ -81,7 +92,7 @@ func (op textOp) String() string {
   }
 }
 
-func (op textOp) assertValid() {
+func (op *textOp) assertValid() {
   switch {
   case op.opType == textSkipOp:
     debug.Assert(op.n > 0, "Skip op needs positive n: %d", op.n)
@@ -107,7 +118,7 @@ func (tt *textTransform) assertValid() {
 }
 
 /*
- makeIterators - produce iterator functions getNext(length) and peek()
+ makeIterators - produce iterator function getNext(length)
  */
 func (tt *textTransform) makeIterator () (getNext func(int) (textOp, bool)) {
   var pos, offset int
@@ -181,7 +192,8 @@ func (tt *textTransform) applyOn (doc *textState) error {
 }
 
 /*
- transformWith - apply the given transform onto this transform
+ transformWith - apply the given transform onto this transform such that the new
+ transform can be applied after the given transform
  */
 func (tt *textTransform) transformWith (ttBy *textTransform) (*textTransform, error) {
   ttNew := &textTransform{}
