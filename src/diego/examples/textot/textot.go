@@ -30,10 +30,15 @@ func makeState() resolver.State {
   return result
 }
 
+func (ts textState) String() string {
+  return "[" + strconv.Itoa(int(ts.id)) + "]" + ts.str
+}
+
 /*
  Apply - apply transaction if it's recent enough, otherwise, cancel.
  */
 func (ts *textState) Apply(action resolver.Transaction) (bool, resolver.Transaction) {
+  debug.DPrintf(1, "Applying %v to %v.", action, ts)
   transform := action.(*textTransform)
   if ts.id != transform.id {
     return false, action
@@ -51,9 +56,13 @@ func (ts *textState) Apply(action resolver.Transaction) (bool, resolver.Transact
  */
 func (ts *textState) Resolve(ancestorState *resolver.State, log *list.List,
                              current resolver.Transaction) (bool, resolver.Transaction) {
+  debug.DPrintf(1, "Resolving %v from %v to %v.", current, log.Front().Value, log.Back().Value)
   var err error
   transform := current.(*textTransform)
   for e := log.Front(); e != nil; e = e.Next() {
+    if e.Value.(*textTransform).id < transform.id {
+      continue
+    }
     transform, err = transform.transformWith(e.Value.(*textTransform))
     if err != nil {
       debug.Assert(false, "Resolve failed when transforming %v with %v: %v.", transform, e.Value, err)
@@ -109,6 +118,14 @@ func (op *textOp) assertValid() {
 type textTransform struct {
   idObject
   ops []textOp
+}
+
+func (tt textTransform) String() string {
+  str := "{" + strconv.Itoa(int(tt.id)) + ": "
+  for _, op := range tt.ops {
+    str += op.String() + ", "
+  }
+  return str + "}"
 }
 
 func (tt *textTransform) assertValid() {
@@ -196,6 +213,7 @@ func (tt *textTransform) applyOn (doc *textState) error {
  transform can be applied after the given transform
  */
 func (tt *textTransform) transformWith (ttBy *textTransform) (*textTransform, error) {
+  debug.DPrintf(1, "transforming %v by %v", tt, ttBy)
   ttNew := &textTransform{}
   getNext := tt.makeIterator()
   for _, op := range ttBy.ops {
@@ -228,6 +246,7 @@ func (tt *textTransform) transformWith (ttBy *textTransform) (*textTransform, er
   for next, hasNext := getNext(-1); hasNext; next, hasNext = getNext(-1) {
     ttNew.ops = append(ttNew.ops, next)
   }
+  ttNew.id = ttBy.id+1
   ttNew.assertValid()
   return ttNew, nil
 }
