@@ -60,6 +60,18 @@ type gtr struct {
   T resolver.Transaction
 }
 
+// because Go doesn't always fill the buffer you give it to read
+func fillBuffer(buffer []byte, reader *bufio.Reader) {
+  length := 0
+  desiredLength := len(buffer)
+  for length < desiredLength {
+    buf := buffer[length:]
+    n, err := reader.Read(buf)
+    ensureNoError(err)
+    length += n
+  }
+}
+
 /*
 CreateTransactionLogger - factory method for transaction writers
   see type description above for arg details
@@ -115,17 +127,6 @@ func (tl *TransactionLogger) Append(t resolver.Transaction) {
   if len(b) > maxDataEntryLength {
     panic(fmt.Sprintf("Transaction %v caused a data entry %d bytes long, longer than the max allowed", t, len(b)))
   }
-
-  // TODO debugging only
-  dec := gob.NewDecoder(&buffer)
-  var g gtr
-  err = dec.Decode(&g)
-  ensureNoError(err)
-  if g.T.Id() != t.Id() {
-    panic(fmt.Sprintf("Data mismatch: %v != %v", g.T, t))
-  }
-  println(fmt.Sprintf("append gob length: %d", len(b)))
-  // end of debugging only
 
   _, err = tl.newestDataFile.Write(b)
   ensureNoError(err)
@@ -218,12 +219,11 @@ func (tl *TransactionLogger) readAllFileIndex(index int64, callback func(resolve
     err = binary.Read(indexReader, binary.LittleEndian, &dataItemEndOffset)
     ensureNoError(err)
 
-    // TODO remove when tests aren't failing any more
-    println(fmt.Sprintf("gob %d length: %d", i, dataItemEndOffset - dataItemStartOffset))
+    length := dataItemEndOffset - dataItemStartOffset
 
-    dataBytes := mainDataBytes[:dataItemEndOffset - dataItemStartOffset]
-    _, err := dataReader.Read(dataBytes)
-    ensureNoError(err)
+    dataBytes := mainDataBytes[:length]
+    fillBuffer(dataBytes, dataReader)
+
     buf := bytes.NewBuffer(dataBytes)
 
     dec := gob.NewDecoder(buf)
