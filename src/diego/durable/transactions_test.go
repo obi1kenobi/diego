@@ -4,6 +4,8 @@ import "os"
 import "testing"
 import "encoding/gob"
 
+import "diego/resolver"
+
 type testTx struct {
   IdNum int64
 }
@@ -16,78 +18,146 @@ func (tx *testTx) SetId(id int64) {
   tx.IdNum = id
 }
 
-func TestAppendFew(t *testing.T) {
-  const basePath = "../../../_test/durable/tx_few"
-  os.RemoveAll(basePath)
-  gob.Register(testTx{})
-
-  tl := CreateTransactionLogger(basePath)
-
-  tl.assertValid()
-
-  for i := 0; i < 5; i++ {
-    tx := &testTx{int64(i)}
-    tl.Append(tx)
-    tl.assertValid()
-  }
-
-  dir, err := os.Open(basePath)
+func expectNFilesAtPath(t *testing.T, n int, path string) {
+  dir, err := os.Open(path)
   ensureNoError(err)
 
   names, err := dir.Readdirnames(0)
   ensureNoError(err)
 
-  if len(names) != 2 {
-    t.Errorf("Expected 2 files, found %v", names)
+  if len(names) != n {
+    t.Errorf("Expected %d files; found %d: %v", n, len(names), names)
   }
+}
+
+func expectNFilePairs(t *testing.T, n int, tl *TransactionLogger) {
+  if len(tl.dataFiles) != n {
+    t.Errorf("Expected %d data files; found %d in map", n, len(tl.dataFiles))
+  }
+  if len(tl.indexFiles) != n {
+    t.Errorf("Expected %d index files; found %d in map", n, len(tl.indexFiles))
+  }
+}
+
+func expectNTransactions(t *testing.T, n int64, tl *TransactionLogger) {
+  count := int64(0)
+  callback := func(tr resolver.Transaction) {
+    if tr.Id() != count {
+      t.Errorf("Expected ID %d (in order) but got ID %d", count, tr.Id())
+    }
+    count++
+  }
+
+  tl.ReadAll(callback)
+  if count != n {
+    t.Errorf("Read %d transactions total, expected %d", count, n)
+  }
+}
+
+var isSetUp bool
+func setup() {
+  if !isSetUp {
+    gob.Register(&testTx{})
+    isSetUp = true
+  }
+}
+
+func TestAppendFew(t *testing.T) {
+  const basePath = "../../../_test/durable/tx_few"
+  os.RemoveAll(basePath)
+  setup()
+
+  tl := CreateTransactionLogger(basePath)
+  numTestEntries := 198
+
+  tl.assertValid()
+
+  for i := 0; i < numTestEntries; i++ {
+    tx := &testTx{int64(i)}
+    tl.Append(tx)
+    tl.assertValid()
+  }
+
+  expectNFilesAtPath(t, 2, basePath)
+  expectNFilePairs(t, 1, tl)
+  expectNTransactions(t, int64(numTestEntries), tl)
+  tl.Close()
 }
 
 func TestAppendMany(t *testing.T) {
   const basePath = "../../../_test/durable/tx_many"
   os.RemoveAll(basePath)
-  gob.Register(testTx{})
+  setup()
 
   tl := CreateTransactionLogger(basePath)
+  numTestEntries := maxChunkLength + 2
 
   tl.assertValid()
 
-  for i := 0; i < maxChunkLength + 2; i++ {
+  for i := 0; i < numTestEntries; i++ {
     tx := &testTx{int64(i)}
     tl.Append(tx)
     tl.assertValid()
   }
 
-  dir, err := os.Open(basePath)
-  ensureNoError(err)
-
-  names, err := dir.Readdirnames(0)
-  ensureNoError(err)
-
-  if len(names) != 4 {
-    t.Errorf("Expected 4 files, found %v", names)
-  }
+  expectNFilesAtPath(t, 4, basePath)
+  expectNFilePairs(t, 2, tl)
+  expectNTransactions(t, int64(numTestEntries), tl)
+  tl.Close()
 }
 
 func TestCreateNextFiles(t *testing.T) {
-  const basePath = "../../../_test/durable/createnext"
+  const basePath = "../../../_test/durable/create_next"
   os.RemoveAll(basePath)
+  setup()
+
   tl := CreateTransactionLogger(basePath)
   tl.assertValid()
 
-  // not part of API
+  // not part of API, should never happen in prod
   // testing internals
   tl.createNextFiles()
   tl.createNextFiles()
 
   tl.assertValid()
 
-  dir, err := os.Open(basePath)
-  ensureNoError(err)
+  expectNFilesAtPath(t, 6, basePath)
+  expectNFilePairs(t, 3, tl)
+  tl.Close()
+}
 
-  names, err := dir.Readdirnames(0)
-  ensureNoError(err)
+func TestLoadExisting(t *testing.T) {
+  const basePath = "../../../_test/durable/load_existing"
+  os.RemoveAll(basePath)
+  setup()
 
-  if len(names) != 6 {
-    t.Errorf("Expected 6 files, found %v", names)
+  tl := CreateTransactionLogger(basePath)
+  tl.assertValid()
+
+  firstLimit := 3
+  for i := 0; i < firstLimit; i++ {
+    tx := &testTx{int64(i)}
+    tl.Append(tx)
+    tl.assertValid()
   }
+
+  expectNFilesAtPath(t, 2, basePath)
+  expectNFilePairs(t, 1, tl)
+
+  tl.Close()
+  tl = CreateTransactionLogger(basePath)
+  tl.assertValid()
+
+  for i := firstLimit; i < maxChunkLength; i++ {
+    tx := &testTx{int64(i)}
+    tl.Append(tx)
+    tl.assertValid()
+  }
+
+  // since we only added maxChunkLength transactions total
+  // the new transaction logger should have still used the same files
+  expectNFilesAtPath(t, 2, basePath)
+  expectNFilePairs(t, 1, tl)
+  expectNTransactions(t, maxChunkLength, tl)
+  tl.Close()
 }

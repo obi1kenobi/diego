@@ -4,6 +4,7 @@ import "os"
 import "fmt"
 import "math"
 import "sync"
+import "bufio"
 import "bytes"
 import "strings"
 import "strconv"
@@ -20,6 +21,7 @@ const defaultPerm = 0666
 const maxChunkLength = 1000
 const longLength = 8
 const expectedIndexFileLength = maxChunkLength * longLength
+const maxDataEntryLength = 16 * 1024
 
 /*
 TransactionLogger - durable write-ahead log for transactions
@@ -41,12 +43,21 @@ type TransactionLogger struct {
   // number of bytes in current data chunk
   currentDataLength int64
 
+  closed bool
+
   dataFiles map[int64]string
   indexFiles map[int64]string
 
   newestFileIndex int64
   newestDataFile *os.File
   newestIndexFile *os.File
+}
+
+// because Go's type system is lame (very long story)
+// name needs to be short to keep gobs short
+// gtr = gobbed transaction
+type gtr struct {
+  T resolver.Transaction
 }
 
 /*
@@ -58,12 +69,13 @@ func CreateTransactionLogger(basePath string) *TransactionLogger {
   tl.basePath = basePath
 
   err := os.MkdirAll(basePath, defaultPerm)
-  if err != nil {
-    panic(err)
-  }
+  ensureNoError(err)
 
   tl.clearedIndex = -1
   tl.newestFileIndex = -1
+
+  tl.dataFiles = make(map[int64]string)
+  tl.indexFiles = make(map[int64]string)
 
   // check if there is already some data at the directory
   // if so, make it available to the transaction writer
@@ -80,6 +92,10 @@ func (tl *TransactionLogger) Append(t resolver.Transaction) {
   tl.mu.Lock()
   defer tl.mu.Unlock()
 
+  if tl.closed {
+    panic("Append called on a closed logger")
+  }
+
   if tl.currentChunkEntryCount == maxChunkLength {
     tl.createNextFiles()
   }
@@ -92,10 +108,25 @@ func (tl *TransactionLogger) Append(t resolver.Transaction) {
   //   and truncate the data file at that offset
   var buffer bytes.Buffer
   enc := gob.NewEncoder(&buffer)
-  err := enc.Encode(t)
+  err := enc.Encode(gtr{t})
   ensureNoError(err)
 
   b := buffer.Bytes()
+  if len(b) > maxDataEntryLength {
+    panic(fmt.Sprintf("Transaction %v caused a data entry %d bytes long, longer than the max allowed", t, len(b)))
+  }
+
+  // TODO debugging only
+  dec := gob.NewDecoder(&buffer)
+  var g gtr
+  err = dec.Decode(&g)
+  ensureNoError(err)
+  if g.T.Id() != t.Id() {
+    panic(fmt.Sprintf("Data mismatch: %v != %v", g.T, t))
+  }
+  println(fmt.Sprintf("append gob length: %d", len(b)))
+  // end of debugging only
+
   _, err = tl.newestDataFile.Write(b)
   ensureNoError(err)
 
@@ -110,14 +141,103 @@ func (tl *TransactionLogger) Append(t resolver.Transaction) {
 }
 
 /*
-ReadAll - reads all transactions in the entire log, calling the callback function with every transaction
+Close - close the logger and do cleanup
+  calling any function except Close on a closed logger will cause a panic
+  Close is idempotent and can be called multiple times
+*/
+func (tl *TransactionLogger) Close() {
+  tl.mu.Lock()
+  defer tl.mu.Unlock()
+
+  if tl.closed {
+    return
+  }
+
+  tl.closed = true
+  if tl.newestIndexFile != nil {
+    err := tl.newestIndexFile.Close()
+    ensureNoError(err)
+    tl.newestIndexFile = nil
+  }
+  if tl.newestDataFile != nil {
+    err := tl.newestDataFile.Close()
+    ensureNoError(err)
+    tl.newestDataFile = nil
+  }
+}
+
+/*
+ReadAll - reads all transactions in the entire log, in order,
+  calling the callback function with every transaction
+
   VERY EXPENSIVE FUNCTION -- use only when recovering from faults
 */
 func (tl *TransactionLogger) ReadAll(callback func(resolver.Transaction)) {
   tl.mu.Lock()
   defer tl.mu.Unlock()
 
-  // TODO
+  if tl.closed {
+    panic("ReadAll called on a closed logger")
+  }
+
+  var i int64
+  for i = 0; i <= tl.newestFileIndex; i++ {
+    tl.readAllFileIndex(i, callback)
+  }
+}
+
+func (tl *TransactionLogger) readAllFileIndex(index int64, callback func(resolver.Transaction)) {
+  // we're guaranteed that indexFiles and dataFiles have entries on the same keys
+  // it's enough to check just one
+  _, ok := tl.indexFiles[index]
+  if !ok {
+    return
+  }
+
+  indexFile, err := os.Open(tl.makePath(index, indexExtension))
+  ensureNoError(err)
+
+  dataFile, err := os.Open(tl.makePath(index, dataExtension))
+  ensureNoError(err)
+
+  fi, err := indexFile.Stat()
+  ensureNoError(err)
+
+  entryCount := fi.Size() / longLength
+
+  indexReader := bufio.NewReader(indexFile)
+  dataReader := bufio.NewReaderSize(dataFile, maxDataEntryLength)
+
+  var dataItemEndOffset int64
+  var dataItemStartOffset int64
+  var i int64
+
+  mainDataBytes := make([]byte, maxDataEntryLength)
+  for i = 0; i < entryCount; i++ {
+    dataItemStartOffset = dataItemEndOffset
+    err = binary.Read(indexReader, binary.LittleEndian, &dataItemEndOffset)
+    ensureNoError(err)
+
+    // TODO remove when tests aren't failing any more
+    println(fmt.Sprintf("gob %d length: %d", i, dataItemEndOffset - dataItemStartOffset))
+
+    dataBytes := mainDataBytes[:dataItemEndOffset - dataItemStartOffset]
+    _, err := dataReader.Read(dataBytes)
+    ensureNoError(err)
+    buf := bytes.NewBuffer(dataBytes)
+
+    dec := gob.NewDecoder(buf)
+    var gobbed gtr
+    err = dec.Decode(&gobbed)
+    ensureNoError(err)
+
+    callback(gobbed.T)
+  }
+
+  err = indexFile.Close()
+  ensureNoError(err)
+  err = dataFile.Close()
+  ensureNoError(err)
 }
 
 func (tl *TransactionLogger) assertValid() {
@@ -170,7 +290,9 @@ func (tl *TransactionLogger) getFileEntryOffset(i int64) int64 {
 
   var offset int64
   buffer := bytes.NewBuffer(b)
-  binary.Read(buffer, binary.LittleEndian, &offset)
+  err = binary.Read(buffer, binary.LittleEndian, &offset)
+  ensureNoError(err)
+
   return offset
 }
 
@@ -190,12 +312,18 @@ func (tl *TransactionLogger) createNextFiles() {
     ensureNoError(err)
   }
 
-  tl.newestIndexFile, err = os.OpenFile(tl.makePath(tl.newestFileIndex, indexExtension),
+  indexPath := tl.makePath(tl.newestFileIndex, indexExtension)
+  dataPath := tl.makePath(tl.newestFileIndex, dataExtension)
+
+  tl.indexFiles[tl.newestFileIndex] = indexPath
+  tl.dataFiles[tl.newestFileIndex] = dataPath
+
+  tl.newestIndexFile, err = os.OpenFile(indexPath,
                                         os.O_RDWR | os.O_CREATE,
                                         defaultPerm)
   ensureNoError(err)
 
-  tl.newestDataFile, err = os.OpenFile(tl.makePath(tl.newestFileIndex, dataExtension),
+  tl.newestDataFile, err = os.OpenFile(dataPath,
                                        os.O_RDWR | os.O_CREATE,
                                        defaultPerm)
   ensureNoError(err)
@@ -310,7 +438,7 @@ func tryLoadExistingWriter(tl *TransactionLogger) {
   }
 
   // prep the newest index's corresponding data file
-  tl.newestDataFile, err = os.OpenFile(tl.makePath(maxFileIndex, indexExtension),
+  tl.newestDataFile, err = os.OpenFile(tl.makePath(maxFileIndex, dataExtension),
                                        os.O_RDWR | os.O_APPEND,
                                        defaultPerm)
   fi, err = tl.newestDataFile.Stat()
