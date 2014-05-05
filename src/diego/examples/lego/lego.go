@@ -1,11 +1,9 @@
 package lego
 
-// import "strconv"
 import "container/list"
 import "diego/debug"
 import "diego/resolver"
 import "fmt"
-// import "diego/debug"
 
 // Lego bricks
 const (
@@ -18,6 +16,7 @@ type BrickOrientation int
 
 type LegoBrick struct {
   id int64
+  position Vec3i
   size Vec3i
   orientation BrickOrientation
   color Vec3f
@@ -67,6 +66,7 @@ func (xa *LegoTransaction) Id() int64 {
 type LegoUniverse struct {
   id int64
   bricks map[int64]LegoBrick
+  numBricks int64
   data [][][]int64
 }
 
@@ -78,14 +78,36 @@ func (universe *LegoUniverse) Id() int64 {
   return universe.id
 }
 
+func (universe *LegoUniverse) writeBrick(id int64, position, size Vec3i) {
+  endX := position.data[0] + size.data[0]
+  endY := position.data[1] + size.data[1]
+  endZ := position.data[2] + size.data[2]
+  for x := position.data[0]; x < endX; x++ {
+    for y := position.data[1]; y < endY; y++ {
+      for z := position.data[2]; z < endZ; z++ {
+        universe.data[x][y][z] = id
+      }
+    }
+  }
+}
+
 func (universe *LegoUniverse) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
   xa := t.(*LegoTransaction)
 
   for _, op := range xa.ops {
     switch typedOp := op.(type) {
     case *LegoOpInsertBrick:
-      fmt.Printf("Inserting brick at position = %d %d %d\n",
-                 typedOp.position.data[0], typedOp.position.data[1], typedOp.position.data[2])
+      universe.numBricks++
+      brickId := universe.numBricks
+
+      brick := LegoBrick {
+        brickId, typedOp.position, typedOp.size, typedOp.orientation, typedOp.color,
+      }
+      universe.bricks[brickId] = brick
+      universe.writeBrick(brickId, brick.position, brick.size)
+
+      debug.DPrintf(1, "Inserted brick id %d at position = %v", 
+                    brickId, typedOp.position.data)
     case *LegoOpDeleteBrick:
       fmt.Printf("Deleting brick with id %d\n", typedOp.id)
     case *LegoOpModifyBrickColor:
