@@ -29,6 +29,25 @@ func TestOptimisticSet(t *testing.T) {
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
 }
 
+func TestTestAndSet(t *testing.T) {
+  rs, s := setup()
+
+  testData := []tests.TestDataItem {
+    tests.MakeTestDataItem(&testAndSetOp{0, "a", "b"}, tests.Success, keyValuePredicate("a", "b")),
+    tests.MakeTestDataItem(&testAndSetOp{0, "a", "c"}, tests.Failure, keyValuePredicate("a", "b")),
+    tests.MakeTestDataItem(&testAndSetOp{1, "a", "c"}, tests.Success, keyValuePredicate("a", "c")),
+    tests.MakeTestDataItem(&lwwSetOp{0, "a", "d"}, tests.Success, keyValuePredicate("a", "d")),
+    tests.MakeTestDataItem(&testAndSetOp{1, "a", "c"}, tests.Failure, keyValuePredicate("a", "d")),
+    tests.MakeTestDataItem(&appendOp{0, "a", "c"}, tests.Success, keyValuePredicate("a", "dc")),
+    tests.MakeTestDataItem(&appendOp{0, "a", "e"}, tests.Success, keyValuePredicate("a", "dce")),
+    tests.MakeTestDataItem(&testAndSetOp{4, "a", "e"}, tests.Failure, keyValuePredicate("a", "dce")),
+    tests.MakeTestDataItem(&testAndSetOp{5, "a", "ef"}, tests.Success, keyValuePredicate("a", "ef")),
+    tests.MakeTestDataItem(&testAndSetOp{0, "b", "ab"}, tests.Success, keyValuePredicate("b", "ab")),
+  }
+
+  tests.RunSequentialTest(t, rs, testData, s, stateEquals)
+}
+
 func TestAppend(t *testing.T) {
   rs, s := setup()
 
