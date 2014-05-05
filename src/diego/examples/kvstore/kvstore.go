@@ -41,6 +41,22 @@ func (op *pessimisticSetOp) SetId(id int64) {
   op.id = id
 }
 
+// op that is rejected if there were any changes to the key since the last-seen state
+// (optimistically assumes that there were no changes, fails if this was wrong)
+type testAndSetOp struct {
+  id int64
+  key string
+  value string
+}
+
+func (op *testAndSetOp) Id() int64 {
+  return op.id
+}
+
+func (op *testAndSetOp) SetId(id int64) {
+  op.id = id
+}
+
 // append-to-key op
 type appendOp struct {
   id int64
@@ -121,6 +137,15 @@ func (kv *kvStore) applyPessimisticSet(x *pessimisticSetOp) (bool, resolver.Tran
   return false, nil
 }
 
+func (kv *kvStore) applyTestAndSet(x *testAndSetOp) (bool, resolver.Transaction) {
+  if kv.id == x.id {
+    kv.data[x.key] = x.value
+    return true, x
+  }
+
+  return false, nil
+}
+
 func (kv *kvStore) applyAppend(x *appendOp) (bool, resolver.Transaction) {
   kv.data[x.key] = kv.data[x.key] + x.value
   x.id = kv.id
@@ -160,6 +185,8 @@ func (kv *kvStore) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
     return kv.applyAppend(x)
   case *flipflopAddOp:
     return kv.applyFlipflopAdd(x)
+  case *testAndSetOp:
+    return kv.applyTestAndSet(x)
   default:
     debug.Assert(false, "Unknown transaction type %s", debug.Stringify(t))
     return false, nil
@@ -193,6 +220,47 @@ func (op *flipflopAddOp) resolveFlipFlop(id int64, log *list.List) (bool, resolv
   return true, newT
 }
 
+func (op *testAndSetOp) resolveTestAndSet(id int64, log *list.List) (bool, resolver.Transaction) {
+  newT := new(testAndSetOp)
+  newT.key = op.key
+  newT.value = op.value
+  newT.id = id
+
+  e := log.Front()
+  for e != nil && e.Value.(resolver.Transaction).Id() < op.id {
+    e = e.Next()
+  }
+
+  debug.Assert(e != nil, "Ran out of log elements before reaching op number %d", op.id)
+
+  for e != nil {
+    val := e.Value
+    modkey := ""
+    switch x := val.(type) {
+    case *lwwSetOp:
+      modkey = x.key
+    case *pessimisticSetOp:
+      modkey = x.key
+    case *testAndSetOp:
+      modkey = x.key
+    case *appendOp:
+      modkey = x.key
+    case *flipflopAddOp:
+      modkey = x.key
+    }
+
+    // if anyone modified the key, abort
+    if modkey == op.key {
+      return false, nil
+    }
+
+    e = e.Next()
+  }
+
+  // nobody modified the key, accept
+  return true, newT
+}
+
 func (kv *kvStore) Resolve(ancestorState *resolver.State, log *list.List,
                            current resolver.Transaction) (bool, resolver.Transaction) {
   switch x := current.(type) {
@@ -207,6 +275,8 @@ func (kv *kvStore) Resolve(ancestorState *resolver.State, log *list.List,
     return false, nil
   case *flipflopAddOp:
     return x.resolveFlipFlop(kv.id, log)
+  case *testAndSetOp:
+    return x.resolveTestAndSet(kv.id, log)
   default:
     debug.Assert(false, "Unknown transaction type %s", debug.Stringify(current))
     return false, nil
