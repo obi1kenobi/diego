@@ -18,7 +18,7 @@ type BrickOrientation int
 
 type LegoBrick struct {
   id int64
-  size Vec2i
+  size Vec3i
   orientation BrickOrientation
   color Vec3f
 }
@@ -47,7 +47,7 @@ type LegoOpModifyBrickOrientation struct {
 
 type LegoOpModifyBrickSize struct {
   id int64
-  size Vec2i
+  size Vec3i
 }
 
 // Transactions
@@ -66,7 +66,8 @@ func (xa *LegoTransaction) Id() int64 {
 
 type LegoUniverse struct {
   id int64
-  data [][][]LegoBrick
+  bricks map[int64]LegoBrick
+  data [][][]int64
 }
 
 func (universe *LegoUniverse) SetId(id int64) {
@@ -114,12 +115,13 @@ func makeState() resolver.State {
   result := new(LegoUniverse)
   result.id = 0
   LegoSize := 100
-  result.data = make([][][]LegoBrick, LegoSize)
+  result.bricks = make(map[int64]LegoBrick)
+  result.data = make([][][]int64, LegoSize)
   for i := 0; i < LegoSize; i++ {
-    result.data[i] = make([][]LegoBrick, LegoSize)
+    result.data[i] = make([][]int64, LegoSize)
     for j := 0; j < LegoSize; j++ {
-      result.data[i][j] = make([]LegoBrick, LegoSize)
+      result.data[i][j] = make([]int64, LegoSize)
     }
   }
   return result
-// }
+}
