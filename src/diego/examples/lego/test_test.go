@@ -1,9 +1,6 @@
 package lego
 
 import "testing"
-// import "strings"
-// import "strconv"
-// import "diego/debug"
 import "diego/tests"
 import "diego/resolver"
 
