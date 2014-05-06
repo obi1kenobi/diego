@@ -1,4 +1,4 @@
-package lego
+package server
 
 // Ops
 type LegoOpCreateBrick struct {

@@ -1,4 +1,4 @@
-package lego
+package server
 
 const LegoGridSize = 100
 
