@@ -5,6 +5,8 @@ import "diego/debug"
 import "diego/resolver"
 import "fmt"
 
+const LegoGridSize = 100
+
 // Lego bricks
 const (
   BrickOrientationNorth = iota
@@ -67,7 +69,7 @@ type LegoUniverse struct {
   id int64
   bricks map[int64]LegoBrick
   numBricks int64
-  data [][][]int64
+  grid [][][]int64
 }
 
 func (universe *LegoUniverse) SetId(id int64) {
@@ -85,10 +87,25 @@ func (universe *LegoUniverse) writeBrick(id int64, position, size Vec3i) {
   for x := position.data[0]; x < endX; x++ {
     for y := position.data[1]; y < endY; y++ {
       for z := position.data[2]; z < endZ; z++ {
-        universe.data[x][y][z] = id
+        universe.grid[x][y][z] = id
       }
     }
   }
+}
+
+func (universe *LegoUniverse) GetBrickIdAtPosition(position Vec3i) (int64, bool) {
+  for i := 0; i < 3; i++ {
+    if position.data[i] < 0 || position.data[i] >= LegoGridSize {
+      return 0, false
+    }
+  }
+  xyz := position.data
+  return universe.grid[xyz[0]][xyz[1]][xyz[2]], true
+}
+
+func (universe *LegoUniverse) GetBrick(id int64) (LegoBrick, bool) {
+  brick, ok := universe.bricks[id]
+  return brick, ok
 }
 
 func (universe *LegoUniverse) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
@@ -136,13 +153,12 @@ func (universe *LegoUniverse) Resolve(ancestorState *resolver.State,
 func makeState() resolver.State {
   result := new(LegoUniverse)
   result.id = 0
-  LegoSize := 100
   result.bricks = make(map[int64]LegoBrick)
-  result.data = make([][][]int64, LegoSize)
-  for i := 0; i < LegoSize; i++ {
-    result.data[i] = make([][]int64, LegoSize)
-    for j := 0; j < LegoSize; j++ {
-      result.data[i][j] = make([]int64, LegoSize)
+  result.grid = make([][][]int64, LegoGridSize)
+  for i := 0; i < LegoGridSize; i++ {
+    result.grid[i] = make([][]int64, LegoGridSize)
+    for j := 0; j < LegoGridSize; j++ {
+      result.grid[i][j] = make([]int64, LegoGridSize)
     }
   }
   return result
