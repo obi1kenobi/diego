@@ -1,4 +1,4 @@
-package lego
+package server
 
 import "container/list"
 import "diego/debug"
@@ -21,7 +21,7 @@ func (universe *LegoUniverse) Apply(t resolver.Transaction) (bool, resolver.Tran
       universe.bricks[brickId] = brick
       universe.writeBrick(brickId, brick.position, brick.size)
 
-      debug.DPrintf(1, "Inserted brick id %d at position = %v", 
+      debug.DPrintf(1, "Inserted brick id %d at position = %v",
                     brickId, typedOp.position.data)
     case *LegoOpDeleteBrick:
       fmt.Printf("Deleting brick with id %d\n", typedOp.id)
@@ -50,9 +50,9 @@ func (universe *LegoUniverse) Resolve(ancestorState *resolver.State,
   // - delete brick
   // - modify brick
   //
-  // Conflict: 
+  // Conflict:
   //    - two users inserting the same brick at same position.
-  //    - Resolution: instead of inserting a new brick, simply modify 
+  //    - Resolution: instead of inserting a new brick, simply modify
   currentXa := current.(*LegoTransaction)
   currentOp := currentXa.ops[0]
   for e := log.Front(); e != nil; e = e.Next() {

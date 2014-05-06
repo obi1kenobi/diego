@@ -1,4 +1,4 @@
-package lego
+package server
 
 import "testing"
 import "diego/tests"
@@ -23,12 +23,11 @@ func makeTransaction(id int64, ops []interface{}) *LegoTransaction {
 
 func checkBrickId(t *testing.T, universe *LegoUniverse, id int64) bool {
   _, ok := universe.GetBrick(id)
-  if ok {
-    return true
-  } else {
+  if !ok {
     t.Errorf("Brick id %d is unknown to the universe.", id)
     return false
   }
+  return true
 }
 
 func checkBrick(t *testing.T,

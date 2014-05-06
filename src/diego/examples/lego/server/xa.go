@@ -1,4 +1,4 @@
-package lego
+package server
 
 // Transactions
 type LegoTransaction struct {
