@@ -4,116 +4,14 @@ import "container/list"
 import "diego/debug"
 import "diego/resolver"
 import "fmt"
-
-const LegoGridSize = 100
-
-// Lego bricks
-const (
-  BrickOrientationNorth = iota
-  BrickOrientationEast
-  BrickOrientationSouth
-  BrickOrientationWest
-)
-type BrickOrientation int
-
-type LegoBrick struct {
-  id int64
-  position Vec3i
-  size Vec3i
-  orientation BrickOrientation
-  color Vec3f
-}
-
-// Ops
-type LegoOpInsertBrick struct {
-  position Vec3i
-  size Vec3i
-  orientation BrickOrientation
-  color Vec3f
-}
-
-type LegoOpDeleteBrick struct {
-  id int64
-}
-
-type LegoOpModifyBrickColor struct {
-  id int64
-  color Vec3f
-}
-
-type LegoOpModifyBrickOrientation struct {
-  id int64
-  orientation BrickOrientation
-}
-
-type LegoOpModifyBrickSize struct {
-  id int64
-  size Vec3i
-}
-
-// Transactions
-type LegoTransaction struct {
-  id int64
-  ops []interface{}
-}
-
-func (xa *LegoTransaction) SetId(id int64) {
-  xa.id = id
-}
-
-func (xa *LegoTransaction) Id() int64 {
-  return xa.id
-}
-
-type LegoUniverse struct {
-  id int64
-  bricks map[int64]LegoBrick
-  numBricks int64
-  grid [][][]int64
-}
-
-func (universe *LegoUniverse) SetId(id int64) {
-  universe.id = id
-}
-
-func (universe *LegoUniverse) Id() int64 {
-  return universe.id
-}
-
-func (universe *LegoUniverse) writeBrick(id int64, position, size Vec3i) {
-  endX := position.data[0] + size.data[0]
-  endY := position.data[1] + size.data[1]
-  endZ := position.data[2] + size.data[2]
-  for x := position.data[0]; x < endX; x++ {
-    for y := position.data[1]; y < endY; y++ {
-      for z := position.data[2]; z < endZ; z++ {
-        universe.grid[x][y][z] = id
-      }
-    }
-  }
-}
-
-func (universe *LegoUniverse) GetBrickIdAtPosition(position Vec3i) (int64, bool) {
-  for i := 0; i < 3; i++ {
-    if position.data[i] < 0 || position.data[i] >= LegoGridSize {
-      return 0, false
-    }
-  }
-  xyz := position.data
-  return universe.grid[xyz[0]][xyz[1]][xyz[2]], true
-}
-
-func (universe *LegoUniverse) GetBrick(id int64) (LegoBrick, bool) {
-  brick, ok := universe.bricks[id]
-  return brick, ok
-}
+import "reflect"
 
 func (universe *LegoUniverse) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
   xa := t.(*LegoTransaction)
 
   for _, op := range xa.ops {
     switch typedOp := op.(type) {
-    case *LegoOpInsertBrick:
+    case *LegoOpCreateBrick:
       universe.numBricks++
       brickId := universe.numBricks
 
@@ -147,7 +45,43 @@ func (universe *LegoUniverse) Apply(t resolver.Transaction) (bool, resolver.Tran
 func (universe *LegoUniverse) Resolve(ancestorState *resolver.State,
                                       log *list.List,
                                       current resolver.Transaction) (bool, resolver.Transaction) {
-    return false, nil
+  // Ops:
+  // - insert brick
+  // - delete brick
+  // - modify brick
+  //
+  // Conflict: 
+  //    - two users inserting the same brick at same position.
+  //    - Resolution: instead of inserting a new brick, simply modify 
+  currentXa := current.(*LegoTransaction)
+  currentOp := currentXa.ops[0]
+  for e := log.Front(); e != nil; e = e.Next() {
+    xa := e.Value.(*LegoTransaction)
+    if xa.id < currentXa.id {
+      continue
+    }
+
+    op := xa.ops[0]
+
+    // Check for conflicting operations on same brick
+    opId := getOpId(op)
+    currentOpId := getOpId(currentOp)
+    if opId != 0 && opId == currentOpId {
+      // Check for modify conflicts
+      if isModifyOp(currentOp) {
+        // if currentOp.(type) == op.(type) {
+        if reflect.TypeOf(currentOp) == reflect.TypeOf(op) {
+          // Two conflicting modify ops
+          return false, current
+        }
+        if isDeleteOp(op) {
+          // Modify on a deleted brick
+          return false, current
+        }
+      }
+    }
+  }
+  return true, current
 }
 
 func makeState() resolver.State {
@@ -163,3 +97,4 @@ func makeState() resolver.State {
   }
   return result
 }
+

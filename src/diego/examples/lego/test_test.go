@@ -106,9 +106,9 @@ func checkBrick(t *testing.T,
   return true
 }
 
-func legoInsertPredicate(ops []interface{}) func(*testing.T, resolver.State) bool {
+func legoCreatePredicate(ops []interface{}) func(*testing.T, resolver.State) bool {
   return func(t *testing.T, s resolver.State) bool {
-    op := ops[0].(*LegoOpInsertBrick)
+    op := ops[0].(*LegoOpCreateBrick)
     universe := s.(*LegoUniverse)
 
     // Did something get inserted?
@@ -130,17 +130,58 @@ func stateEquals(a, b resolver.State) bool {
   return true
 }
 
-func TestInsertOp(t *testing.T) {
+func TestCreateOp(t *testing.T) {
   rs, s := setup()
 
+  // Transactions for tests and expected results
   xas := [][]interface{} {
-    { &LegoOpInsertBrick { MakeVec3i(0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
-    { &LegoOpInsertBrick { MakeVec3i(10, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+    { &LegoOpCreateBrick { MakeVec3i(0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+    { &LegoOpCreateBrick { MakeVec3i(10, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
   }
+  expectedResult := []tests.TransactionResult {
+    tests.Success,
+    tests.Success,
+  }
+
+  // Prepare tests
   testData := make([]tests.TestDataItem, len(xas))
   for xaId, xa := range xas {
     testData[xaId] =
-      tests.MakeTestDataItem(makeTransaction(int64(xaId), xa), tests.Success, legoInsertPredicate(xa))
+      tests.MakeTestDataItem(makeTransaction(int64(xaId), xa),
+                             expectedResult[xaId],
+                             legoCreatePredicate(xa))
   }
+
+  // Run tests
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
 }
+
+/*
+func TestModifyOp(t *testing.T) {
+  rs, s := setup()
+
+  universe := s.(*LegoUniverse)
+
+  // Transactions for tests and expected results
+  xas := [][]interface{} {
+    { &LegoOpCreateBrick { MakeVec3i(0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+    { &LegoOpModifyBrickSize { MakeVec3i(10, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+  }
+  expectedResult := []tests.TransactionResult {
+    tests.Success,
+    tests.Success,
+  }
+
+  // Prepare tests
+  testData := make([]tests.TestDataItem, len(xas))
+  for xaId, xa := range xas {
+    testData[xaId] =
+      tests.MakeTestDataItem(makeTransaction(int64(xaId), xa),
+                             expectedResult[xaId],
+                             legoCreatePredicate(xa))
+  }
+
+  // Run tests
+  tests.RunSequentialTest(t, rs, testData, s, stateEquals)
+}
+*/
