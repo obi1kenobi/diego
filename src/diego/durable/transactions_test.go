@@ -62,6 +62,10 @@ func setup() {
   }
 }
 
+/*
+All the tests below use the directory ./_test when starting from the root of the project.
+*/
+
 func TestAppendFew(t *testing.T) {
   const basePath = "../../../_test/durable/tx_few"
   os.RemoveAll(basePath)
