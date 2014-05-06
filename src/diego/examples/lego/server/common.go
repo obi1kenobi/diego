@@ -1,4 +1,4 @@
-package lego
+package server
 
 type Vec2i struct {
   data [2]int32
