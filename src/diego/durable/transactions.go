@@ -1,5 +1,6 @@
 package durable
 
+import "io"
 import "os"
 import "fmt"
 import "math"
@@ -58,18 +59,6 @@ type TransactionLogger struct {
 // gtr = gobbed transaction
 type gtr struct {
   T resolver.Transaction
-}
-
-// because Go doesn't always fill the buffer you give it to read
-func fillBuffer(buffer []byte, reader *bufio.Reader) {
-  length := 0
-  desiredLength := len(buffer)
-  for length < desiredLength {
-    buf := buffer[length:]
-    n, err := reader.Read(buf)
-    ensureNoError(err)
-    length += n
-  }
 }
 
 /*
@@ -173,7 +162,7 @@ ReadAll - reads all transactions in the entire log, in order,
 
   VERY EXPENSIVE FUNCTION -- use only when recovering from faults
 */
-func (tl *TransactionLogger) ReadAll(callback func(resolver.Transaction)) {
+func (tl *TransactionLogger) ReadAll(transactionProcessor func(resolver.Transaction)) {
   tl.mu.Lock()
   defer tl.mu.Unlock()
 
@@ -183,11 +172,12 @@ func (tl *TransactionLogger) ReadAll(callback func(resolver.Transaction)) {
 
   var i int64
   for i = 0; i <= tl.newestFileIndex; i++ {
-    tl.readAllFileIndex(i, callback)
+    tl.readAllFileIndex(i, transactionProcessor)
   }
 }
 
-func (tl *TransactionLogger) readAllFileIndex(index int64, callback func(resolver.Transaction)) {
+// callers need to hold tl.mu before calling this method
+func (tl *TransactionLogger) readAllFileIndex(index int64, transactionProcessor func(resolver.Transaction)) {
   // we're guaranteed that indexFiles and dataFiles have entries on the same keys
   // it's enough to check just one
   _, ok := tl.indexFiles[index]
@@ -222,7 +212,7 @@ func (tl *TransactionLogger) readAllFileIndex(index int64, callback func(resolve
     length := dataItemEndOffset - dataItemStartOffset
 
     dataBytes := mainDataBytes[:length]
-    fillBuffer(dataBytes, dataReader)
+    io.ReadAtLeast(dataReader, dataBytes, int(length))
 
     buf := bytes.NewBuffer(dataBytes)
 
@@ -231,7 +221,7 @@ func (tl *TransactionLogger) readAllFileIndex(index int64, callback func(resolve
     err = dec.Decode(&gobbed)
     ensureNoError(err)
 
-    callback(gobbed.T)
+    transactionProcessor(gobbed.T)
   }
 
   err = indexFile.Close()
