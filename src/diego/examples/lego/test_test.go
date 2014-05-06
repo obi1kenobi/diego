@@ -133,17 +133,14 @@ func stateEquals(a, b resolver.State) bool {
 func TestInsertOp(t *testing.T) {
   rs, s := setup()
 
-  ops1 := []interface{} {
-    &LegoOpInsertBrick { MakeVec3i(0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } ,
+  xas := [][]interface{} {
+    { &LegoOpInsertBrick { MakeVec3i(0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+    { &LegoOpInsertBrick { MakeVec3i(10, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
   }
-  ops2 := []interface{} {
-    &LegoOpInsertBrick { MakeVec3i(10, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } ,
+  testData := make([]tests.TestDataItem, len(xas))
+  for xaId, xa := range xas {
+    testData[xaId] =
+      tests.MakeTestDataItem(makeTransaction(int64(xaId), xa), tests.Success, legoInsertPredicate(xa))
   }
-  allOps := [][]interface{} { ops1, ops2 }
-  for xaId, ops := range allOps {
-    testData := []tests.TestDataItem {
-      tests.MakeTestDataItem(makeTransaction(int64(xaId), ops), tests.Success, legoInsertPredicate(ops)),
-    }
-    tests.RunSequentialTest(t, rs, testData, s, stateEquals)
-  }
+  tests.RunSequentialTest(t, rs, testData, s, stateEquals)
 }
