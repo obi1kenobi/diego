@@ -97,7 +97,8 @@ CurrentState - calls the callback with the current state for the given namespace
   The callback MUST NOT MODIFY the state.
 
   This is a blocking operation that will prevent all other operations from executing until the
-  callback returns. May be expensive, USE AT YOUR OWN RISK.
+  callback returns. This operation is as expensive as your callback,
+  so USE AS QUICKLY AND SPARINGLY AS POSSIBLE!!!
 
   See resolver.CurrentState for details.
 
