@@ -3,6 +3,7 @@
 #include "Vec4f.h"
 #include "Vec4d.h"
 
+#include <istream>
 #include <ostream>
 
 MfVec4i::MfVec4i(const MfVec4f &vfloat) 
@@ -24,9 +25,16 @@ MfVec4i::MfVec4i(const MfVec4d &vdouble)
 std::ostream &
 operator<<(std::ostream &os, const MfVec4i &vec) 
 {
-    os 
-        << "(" 
-        << vec._data[0] << ", " << vec._data[1] << ", " 
-        << vec._data[2] << ", " << vec._data[3] << ")";
+    os << vec._data[0] << " " << vec._data[1] << " " << vec._data[2] << " " << vec._data[3];
     return os;
+}
+
+std::istream &
+operator>>(std::istream &is, MfVec4i &vec) 
+{
+    is >> vec._data[0];
+    is >> vec._data[1];
+    is >> vec._data[2];
+    is >> vec._data[3];
+    return is;
 }

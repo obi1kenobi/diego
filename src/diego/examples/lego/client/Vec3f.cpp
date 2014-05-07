@@ -3,6 +3,7 @@
 #include "Vec3d.h"
 #include "Vec3i.h"
 
+#include <istream>
 #include <ostream>
 
 MfVec3f::MfVec3f(const MfVec3d &vdouble) 
@@ -21,6 +22,15 @@ MfVec3f::MfVec3f(const MfVec3i &vint) {
 std::ostream &
 operator<<(std::ostream &os, const MfVec3f &vec) 
 {
-    os << "(" << vec._data[0] << ", " << vec._data[1] << ", " << vec._data[2] << ")";
+    os << vec._data[0] << " " << vec._data[1] << " " << vec._data[2];
     return os;
+}
+
+std::istream &
+operator>>(std::istream &is, MfVec3f &vec) 
+{
+    is >> vec._data[0];
+    is >> vec._data[1];
+    is >> vec._data[2];
+    return is;
 }
