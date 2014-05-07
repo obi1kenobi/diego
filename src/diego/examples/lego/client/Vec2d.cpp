@@ -3,6 +3,7 @@
 #include "Vec2f.h"
 #include "Vec2i.h"
 
+#include <istream>
 #include <ostream>
 
 MfVec2d::MfVec2d(const MfVec2f &vfloat) 
@@ -20,6 +21,14 @@ MfVec2d::MfVec2d(const MfVec2i &vint)
 std::ostream &
 operator<<(std::ostream &os, const MfVec2d &vec) 
 {
-    os << "(" << vec._data[0] << ", " << vec._data[1] << ")";
+    os << vec._data[0] << " " << vec._data[1];
     return os;
+}
+
+std::istream &
+operator>>(std::istream &is, MfVec2d &vec) 
+{
+    is >> vec._data[0];
+    is >> vec._data[1];
+    return is;
 }

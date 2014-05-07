@@ -206,6 +206,7 @@ class MfVec4i {
     /// debugging or non-formal presentation of data since there is no
     /// guarantee that the formatting of the data won't change.
     friend std::ostream & operator<<(std::ostream &os, const MfVec4i &vec);
+    friend std::istream & operator>>(std::istream &is, MfVec4i &vec);
 
   private:
     int _data[4];

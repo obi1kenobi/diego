@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
 
-project(fabric)
+project(LegoClient)
 
-set(TARGET "legoServer")
+set(TARGET "LegoClient")
 
 set(CPP_FILES
     BBox3d.cpp
