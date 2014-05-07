@@ -36,3 +36,12 @@ func Assert(cond bool, format string, a ...interface{}) {
     panic(debugv)
   }
 }
+
+/*
+EnsureNoError - panics if the error is not nil
+*/
+func EnsureNoError(err error) {
+  if err != nil {
+    panic(err)
+  }
+}
