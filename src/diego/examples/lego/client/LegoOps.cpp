@@ -44,12 +44,38 @@ LegoOp::MakeCreateOp(const MfVec3i &position,
 }
 
 LegoOp
-LegoOp::MakeModifyPositionOp(uint64_t brickID,
-                             const MfVec3i &position)
+LegoOp::MakeModifyPositionOp(uint64_t brickID, const MfVec3i &position)
 {
     LegoOp op(MODIFY_POSITION);
     op._brickID = brickID;
     op._position = position;
+    return op;
+}
+
+LegoOp
+LegoOp::MakeModifySizeOp(uint64_t brickID, const MfVec3i &size)
+{
+    LegoOp op(MODIFY_SIZE);
+    op._brickID = brickID;
+    op._size = size;
+    return op;
+}
+
+LegoOp
+LegoOp::MakeModifyColorOp(uint64_t brickID, const MfVec3f &color)
+{
+    LegoOp op(MODIFY_COLOR);
+    op._brickID = brickID;
+    op._color = color;
+    return op;
+}
+
+LegoOp
+LegoOp::MakeModifyOrientationOp(uint64_t brickID, LegoBrick::Orientation orientation)
+{
+    LegoOp op(MODIFY_ORIENTATION);
+    op._brickID = brickID;
+    op._orientation = orientation;
     return op;
 }
 
