@@ -28,3 +28,9 @@ LegoBrick::SetOrientation(Orientation orientation)
 {
     return true;
 }
+
+bool
+LegoBrick::SetColor(const MfVec3f &color)
+{
+    return true;
+}
