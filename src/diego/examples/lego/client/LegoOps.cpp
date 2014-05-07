@@ -2,8 +2,6 @@
 
 #include <assert.h>
 
-#include "JsonSerializer.h"
-
 void
 LegoOp::Serialize(std::ostringstream &os)
 {

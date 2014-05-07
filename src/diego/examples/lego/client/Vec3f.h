@@ -199,6 +199,7 @@ class MfVec3f {
     /// debugging or non-formal presentation of data since there is no
     /// guarantee that the formatting of the data won't change.
     friend std::ostream & operator<<(std::ostream &os, const MfVec3f &vec);
+    friend std::istream & operator>>(std::istream &is, MfVec3f &vec);
 
   private:
     float _data[3];
