@@ -17,6 +17,8 @@ class LegoBrick {
         WEST,
     };
 
+    ~LegoBrick();
+
     uint64_t GetID() const {
         return _id;
     }
@@ -43,6 +45,7 @@ class LegoBrick {
 
   private:
     friend class LegoUniverse;
+    friend class LegoTransactionMgr;
 
     LegoBrick(LegoTransactionMgr *xaMgr,
               uint64_t id,
@@ -57,6 +60,19 @@ class LegoBrick {
         _orientation(orientation),
         _color(color)
     {
+    }
+
+    void _SetPosition(const MfVec3i &position) {
+        _position = position;
+    }
+    void _SetSize(const MfVec3i &size) {
+        _size = size;
+    }
+    void _SetOrientation(Orientation orientation) {
+        _orientation = orientation;
+    }
+    void _SetColor(const MfVec3f &color) {
+        _color = color;
     }
 
     LegoTransactionMgr *_xaMgr;
