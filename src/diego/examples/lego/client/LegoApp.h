@@ -23,6 +23,8 @@ class LegoApp {
 
     ~LegoApp();
 
+    bool ProcessOp(const std::string &op);
+
     void InitializeViewers(QWidget *, QWidget *parentWidget);
 
     const std::vector<QWidget*> & GetViewerWidgets() const {

@@ -39,6 +39,9 @@ class LegoOp {
     // Deserialization constructor
     LegoOp(std::istream &is);
 
+    bool IsValid() const {
+        return _valid;
+    }
 
     Type GetType() const {
         return _type;
@@ -68,10 +71,10 @@ class LegoOp {
 
   private:
     LegoOp(Type type) :
+        _valid(true),
         _type(type) {}
 
-    friend class LegoOp;
-
+    bool _valid;
     Type _type;
     uint64_t _brickID;
     MfVec3i _position;

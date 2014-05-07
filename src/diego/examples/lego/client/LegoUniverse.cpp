@@ -14,6 +14,20 @@ LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
 }
 
 bool
+LegoUniverse::ProcessOp(const std::string &opText)
+{
+    std::istringstream ops(opText);
+    LegoOp op(ops);
+    if (!op.IsValid()) {
+        return false;
+    }
+    LegoTransaction xa;
+    xa.AddOp(op);
+    bool success = _xaMgr.Execute(xa);
+    return success;
+}
+
+bool
 LegoUniverse::CreateBrick(const MfVec3i &position,
                           const MfVec3i &size,
                           LegoBrick::Orientation orientation,
