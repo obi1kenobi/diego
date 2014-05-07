@@ -8,11 +8,11 @@ set(LIBRARY_CPP_FILES
     BBox3d.cpp
     LegoApp.cpp
     LegoBrick.cpp
-    LegoUniverse.cpp
+    LegoMainWindow.cpp
     LegoOps.cpp
     LegoTransaction.cpp
     LegoTransactionMgr.cpp
-    MainWindow.cpp
+    LegoUniverse.cpp
     Matrix4d.cpp
     Mesh.cpp
     STLWriter.cpp

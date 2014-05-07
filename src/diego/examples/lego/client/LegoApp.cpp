@@ -1,6 +1,6 @@
 #include "LegoApp.h"
 #include "LegoUniverse.h"
-#include "MainWindow.h"
+#include "LegoMainWindow.h"
 
 #include <cassert>
 
