@@ -10,9 +10,9 @@ func TestSerializeCreateOp(t *testing.T) {
   ns := "testNs"
 
   b := new(bytes.Buffer)
-  serializeTransaction(ns, xa, b)
+  SerializeTransaction(ns, xa, b)
 
-  resNs, resXa := deserializeTransaction(b)
+  resNs, resXa := DeserializeTransaction(b)
 
   if ns != resNs {
     t.Errorf("expected ns=%s got resNs=%s", ns, resNs)
