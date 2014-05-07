@@ -1,5 +1,13 @@
 package server
 
+import "bytes"
+
+const createBrick = "CreateBrick"
+const deleteBrick = "DeleteBrick"
+const modifyBrickColor = "BrickColor"
+const modifyBrickOrientation = "BrickOrientation"
+const modifyBrickSize = "BrickSize"
+
 // Ops
 type LegoOpCreateBrick struct {
   position Vec3i
@@ -50,4 +58,20 @@ func isModifyOp(op interface{}) bool {
 func isDeleteOp(op interface{}) bool {
   _, ok := op.(*LegoOpDeleteBrick)
   return ok
+}
+
+func (op *LegoOpCreateBrick) serialize(b *bytes.Buffer) {
+  b.WriteString(createBrick)
+  op.position.serialize(b)
+  op.size.serialize(b)
+  serializeInt32(int32(op.orientation), b)
+  op.color.serialize(b)
+  b.WriteByte('\n')
+}
+
+func (op *LegoOpCreateBrick) deserialize(b *bytes.Buffer) {
+  op.position.deserialize(b)
+  op.size.deserialize(b)
+  op.orientation = BrickOrientation(deserializeInt32(b))
+  op.color.deserialize(b)
 }
