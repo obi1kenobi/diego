@@ -11,22 +11,19 @@ LegoTransaction::LegoTransaction(std::istream &is)
         if (next == '*') {
             break;
         }
-        LegoOp *op = LegoOp::Construct(is);
+        LegoOp op(is);
         _ops.push_back(op);
     }
 }
 
 LegoTransaction::~LegoTransaction()
 {
-    for (auto *op : _ops) {
-        delete op;
-    }
 }
 
 void
 LegoTransaction::Serialize(std::ostream &os) const
 {
-    for (auto *op : _ops) {
-        op->Serialize(os);
+    for (const auto &op : _ops) {
+        op.Serialize(os);
     }
 }

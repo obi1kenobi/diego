@@ -17,20 +17,18 @@ class LegoTransaction
     // All ops are destroyed.
     ~LegoTransaction();
 
-    template <typename Op>
-    void AddOp(const Op &op) {
-        Op *myOp = new Op(op);
-        _ops.push_back(myOp);
+    void AddOp(const LegoOp &op) {
+        _ops.push_back(op);
     }
 
-    const std::vector<LegoOp*> & GetOps() const {
+    const std::vector<LegoOp> & GetOps() const {
         return _ops;
     }
 
     void Serialize(std::ostream &os) const;
 
   private:
-    std::vector<LegoOp*> _ops;
+    std::vector<LegoOp> _ops;
 };
 
 #endif // LEGO_TRANSACTION_H
