@@ -3,7 +3,10 @@ package core
 import "diego/resolver"
 import "diego/namespace"
 
-type diegoCore struct {
+/*
+DiegoCore - the main object of the Diego conflict resolution framework.
+*/
+type DiegoCore struct {
   nsManager *namespace.NamespaceManager
   trailingDistance int
   makeState func()resolver.State
@@ -12,8 +15,8 @@ type diegoCore struct {
 /*
 CreateDiegoCore - factory method to make a diego core object.
 */
-func CreateDiegoCore(trailingDistance int, makeState func()resolver.State) *diegoCore {
-  dc := new(diegoCore)
+func CreateDiegoCore(trailingDistance int, makeState func()resolver.State) *DiegoCore {
+  dc := new(DiegoCore)
   dc.trailingDistance = trailingDistance
 
   if dc.trailingDistance <= 0 {
@@ -25,7 +28,7 @@ func CreateDiegoCore(trailingDistance int, makeState func()resolver.State) *dieg
   return dc
 }
 
-func (dc *diegoCore) robustGetNamespace(ns string) *resolver.Resolver {
+func (dc *DiegoCore) robustGetNamespace(ns string) *resolver.Resolver {
   rs, ok := dc.nsManager.GetNamespace(ns)
   for !ok {
     rs := resolver.CreateResolver(dc.makeState, dc.trailingDistance)
@@ -47,10 +50,10 @@ SubmitTransaction - submits the specified transaction to the specified namespace
 
   Safe for concurrent use.
 */
-func (dc *diegoCore) SubmitTransaction(ns string, t resolver.Transaction) (bool, []resolver.Transaction) {
+func (dc *DiegoCore) SubmitTransaction(ns string, t resolver.Transaction) (bool, []resolver.Transaction) {
   rs := dc.robustGetNamespace(ns)
   tid := t.Id()
-  ok = rs.SubmitTransaction(t)
+  ok, _ := rs.SubmitTransaction(t)
   _, transactions := rs.TransactionsSinceId(tid)
   return ok, transactions
 }
@@ -62,7 +65,7 @@ TransactionsSinceId - gets all transactions in the given namespace that happened
 
   Safe for concurrent use.
 */
-func (dc *diegoCore) TransactionsSinceId(ns string, id int64) ([]resolver.Transaction, bool) {
+func (dc *DiegoCore) TransactionsSinceId(ns string, id int64) ([]resolver.Transaction, bool) {
   rs, ok := dc.nsManager.GetNamespace(ns)
   if !ok {
     return nil, false
@@ -78,7 +81,7 @@ CurrentStateId - gets the current state id in the given namespace. If the namesp
 
   Safe for concurrent use.
 */
-func (dc *diegoCore) CurrentStateId(ns string) (int64, bool) {
+func (dc *DiegoCore) CurrentStateId(ns string) (int64, bool) {
   rs, ok := dc.nsManager.GetNamespace(ns)
   if !ok {
     return 0, false
@@ -101,7 +104,7 @@ CurrentState - calls the callback with the current state for the given namespace
 
   Safe for concurrent use.
 */
-func (dc *diegoCore) CurrentState(ns string, stateProcessor func(resolver.State)) {
+func (dc *DiegoCore) CurrentState(ns string, stateProcessor func(resolver.State)) {
   rs, ok := dc.nsManager.GetNamespace(ns)
   if !ok {
     return

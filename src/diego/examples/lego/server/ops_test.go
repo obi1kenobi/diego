@@ -7,7 +7,7 @@ import "diego/resolver"
 const trailingDistance = 50
 
 func setup()(*resolver.Resolver, *LegoUniverse) {
-  return resolver.CreateResolver(makeState, trailingDistance), makeState().(*LegoUniverse)
+  return resolver.CreateResolver(MakeState, trailingDistance), MakeState().(*LegoUniverse)
 }
 
 func TestLego(t *testing.T) {

@@ -84,7 +84,7 @@ func (universe *LegoUniverse) Resolve(ancestorState *resolver.State,
   return true, current
 }
 
-func makeState() resolver.State {
+func MakeState() resolver.State {
   result := new(LegoUniverse)
   result.id = 0
   result.bricks = make(map[int64]LegoBrick)
@@ -97,4 +97,3 @@ func makeState() resolver.State {
   }
   return result
 }
-
