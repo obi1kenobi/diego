@@ -57,7 +57,14 @@
          </widget>
         </item>
         <item>
-         <widget class="QPlainTextEdit" name="logTextEdit"/>
+         <widget class="QPlainTextEdit" name="logTextEdit">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="opBox"/>
         </item>
        </layout>
       </widget>

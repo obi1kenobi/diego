@@ -7,6 +7,7 @@
 
 LegoOp::LegoOp(std::istream &is)
 {
+    _valid = true;
     std::string type;
     is >> type;
     LegoOp *op = NULL;
@@ -24,8 +25,8 @@ LegoOp::LegoOp(std::istream &is)
         _type = DELETE_BRICK;
         is >> _brickID;
     } else {
-        std::cerr << "FATAL\n";
-        throw std::exception();
+        std::cerr << "Invalid op\n";
+        _valid = false;
     }
 }
 

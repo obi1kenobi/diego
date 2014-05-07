@@ -15,6 +15,8 @@ class LegoUniverse {
         return _id;
     }
 
+    bool ProcessOp(const std::string &op);
+
     bool CreateBrick(const MfVec3i &position,
                      const MfVec3i &size,
                      LegoBrick::Orientation orientation,

@@ -23,6 +23,12 @@ LegoApp::~LegoApp()
     delete _universe; _universe = NULL;
 }
 
+bool
+LegoApp::ProcessOp(const std::string &op)
+{
+    return _universe->ProcessOp(op);
+}
+
 void
 LegoApp::InitializeViewers(QWidget *, QWidget *parentWidget)
 {

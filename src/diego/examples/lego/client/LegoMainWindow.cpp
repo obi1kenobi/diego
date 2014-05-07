@@ -25,6 +25,11 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     // We will store the viewers in here
     _stackedViewWidget = new QStackedWidget();
     _ui->viewportsLayout->addWidget(_stackedViewWidget, 0, 0);
+
+    // Slots/signals
+    connect(_ui->opBox, 
+            SIGNAL(returnPressed()), this, 
+            SLOT(_NewOp()));
 }
 
 LegoMainWindow::~LegoMainWindow()
@@ -53,4 +58,15 @@ LegoMainWindow::_Initialize()
 void
 LegoMainWindow::_AddBrick()
 {
+}
+
+void
+LegoMainWindow::_NewOp()
+{
+    std::string op = _ui->opBox->text().toStdString();
+    bool success = _app->ProcessOp(op);
+    if (success) {
+        _ui->logTextEdit->appendPlainText(op.c_str());
+    }
+    _ui->opBox->clear();
 }
