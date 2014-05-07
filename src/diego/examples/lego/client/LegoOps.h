@@ -26,6 +26,14 @@ class LegoOp {
     static LegoOp MakeModifyPositionOp(uint64_t brickID,
                                        const MfVec3i &position);
 
+    static LegoOp MakeModifySizeOp(uint64_t brickID,
+                                   const MfVec3i &size);
+
+    static LegoOp MakeModifyOrientationOp(uint64_t brickID, 
+                                          LegoBrick::Orientation orientationt);
+
+    static LegoOp MakeModifyColorOp(uint64_t brickID, const MfVec3f &color);
+
     static LegoOp MakeDeleteBrickOp(uint64_t brickID);
 
     // Deserialization constructor

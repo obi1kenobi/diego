@@ -24,17 +24,26 @@ LegoBrick::SetPosition(const MfVec3i &position)
 bool
 LegoBrick::SetSize(const MfVec3i &size)
 {
-    return true;
+    LegoTransaction xa;
+    xa.AddOp(LegoOp::MakeModifySizeOp(GetID(), size));
+    bool success = _xaMgr->Execute(xa);
+    return success;
 }
 
 bool
 LegoBrick::SetOrientation(Orientation orientation)
 {
-    return true;
+    LegoTransaction xa;
+    xa.AddOp(LegoOp::MakeModifyOrientationOp(GetID(), orientation));
+    bool success = _xaMgr->Execute(xa);
+    return success;
 }
 
 bool
 LegoBrick::SetColor(const MfVec3f &color)
 {
-    return true;
+    LegoTransaction xa;
+    xa.AddOp(LegoOp::MakeModifyColorOp(GetID(), color));
+    bool success = _xaMgr->Execute(xa);
+    return success;
 }
