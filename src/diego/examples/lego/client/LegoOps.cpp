@@ -6,7 +6,7 @@
 #include <assert.h>
 
 LegoOp *
-LegoOp::Construct(std::istringstream &is)
+LegoOp::Construct(std::istream &is)
 {
     std::string type;
     is >> type;
@@ -25,7 +25,7 @@ LegoOp::Construct(std::istringstream &is)
 }
 
 void
-LegoOp::Serialize(std::ostringstream &os)
+LegoOp::Serialize(std::ostream &os)
 {
     switch (_type) {
     case CREATE_BRICK: os << "CreateBrick"; break;
@@ -35,20 +35,24 @@ LegoOp::Serialize(std::ostringstream &os)
 }
 
 void
-LegoOp::Deserialize(std::istringstream &is)
+LegoOp::Deserialize(std::istream &is)
 {
 }
 
 void
-LegoOpCreateBrick::Serialize(std::ostringstream &os)
+LegoOpCreateBrick::Serialize(std::ostream &os)
 {
     LegoOp::Serialize(os);
 
-    os << " " << _position << " " << _size << " " << _orientation << " " << _color << "\n";
+    os << " " << _position;
+    os << " " << _size;
+    os << " " << _orientation;
+    os << " " << _color;
+    os << std::endl;
 }
 
 void
-LegoOpCreateBrick::Deserialize(std::istringstream &is)
+LegoOpCreateBrick::Deserialize(std::istream &is)
 {
     LegoOp::Deserialize(is);
 
@@ -59,18 +63,20 @@ LegoOpCreateBrick::Deserialize(std::istringstream &is)
 }
 
 void
-LegoOpModifyPosition::Serialize(std::ostringstream &os)
+LegoOpModifyPosition::Serialize(std::ostream &os)
 {
     LegoOp::Serialize(os);
 
-    os << " " << _brick << _position;
+    os << " " << _brickID;
+    os << " " << _position;
+    os << std::endl;
 }
 
 void
-LegoOpModifyPosition::Deserialize(std::istringstream &is)
+LegoOpModifyPosition::Deserialize(std::istream &is)
 {
     LegoOp::Deserialize(is);
 
-    is >> _brick;
+    is >> _brickID;
     is >> _position;
 }
