@@ -17,9 +17,29 @@ class LegoBrick {
         WEST,
     };
 
+    uint64_t GetID() const {
+        return _id;
+    }
+
     bool SetPosition(const MfVec3i &position);
+    const MfVec3i & GetPosition() const {
+        return _position;
+    }
+
     bool SetSize(const MfVec3i &size);
+    const MfVec3i & GetSize() const {
+        return _size;
+    }
+
     bool SetOrientation(Orientation orientation);
+    Orientation GetOrientation() const {
+        return Orientation(_orientation);
+    }
+
+    bool SetColor(const MfVec3f &color);
+    const MfVec3f & GetColor() const {
+        return _color;
+    }
 
   private:
     friend class LegoUniverse;
@@ -43,7 +63,7 @@ class LegoBrick {
     uint64_t _id;
     MfVec3i _position;
     MfVec3i _size;
-    Orientation _orientation;
+    uint32_t _orientation;
     MfVec3f _color;
 };
 
