@@ -9,6 +9,7 @@ set(CPP_FILES
     LegoBrick.cpp
     LegoUniverse.cpp
     LegoOps.cpp
+    LegoTransaction.cpp
     LegoTransactionMgr.cpp
     Matrix4d.cpp
     Mesh.cpp

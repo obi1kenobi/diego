@@ -1,5 +1,6 @@
 #include "LegoBrick.h"
 #include "LegoOps.h"
+#include "LegoTransaction.h"
 #include "LegoTransactionMgr.h"
 
 #include <vector>
@@ -7,14 +8,10 @@
 bool
 LegoBrick::SetPosition(const MfVec3i &position)
 {
-    std::vector<LegoOp*> ops;
-    ops.push_back(new LegoOpModifyPosition(this, position));
-    if (_xaMgr->Execute(ops)) {
-        _position = position;
-        return true;
-    } else {
-        return false;
-    }
+    LegoTransaction xa;
+    xa.AddOp(LegoOpModifyPosition(this, position));
+    bool success = _xaMgr->Execute(xa);
+    return success;
 }
 
 bool
