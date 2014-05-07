@@ -20,6 +20,8 @@ class LegoOp {
     }
 
     virtual void Serialize(std::ostringstream &os);
+    static LegoOp * Construct(std::istringstream &is);
+    virtual void Deserialize(std::istringstream &is);
 
   protected:
     LegoOp(Type type) :
@@ -44,11 +46,16 @@ class LegoOpCreateBrick : public LegoOp {
     }
 
     virtual void Serialize(std::ostringstream &os);
+    virtual void Deserialize(std::istringstream &is);
 
   private:
+    // For deserialization
+    friend class LegoOp;
+    LegoOpCreateBrick() : LegoOp(CREATE_BRICK) {}
+
     MfVec3i _position;
     MfVec3i _size;
-    LegoBrick::Orientation _orientation;
+    uint32_t _orientation;
     MfVec3f _color;
 };
 
@@ -56,15 +63,20 @@ class LegoOpModifyPosition : public LegoOp {
   public:
     LegoOpModifyPosition(LegoBrick *brick, const MfVec3i &position) :
         LegoOp(MODIFY_POSITION),
-        _brick(brick),
+        _brick(brick->GetID()),
         _position(position)
     {
     }
 
     virtual void Serialize(std::ostringstream &os);
+    virtual void Deserialize(std::istringstream &is);
 
   private:
-    LegoBrick *_brick;
+    // For deserialization
+    friend class LegoOp;
+    LegoOpModifyPosition() : LegoOp(MODIFY_POSITION) {}
+
+    uint64_t _brick;
     MfVec3i _position;
 };
 
