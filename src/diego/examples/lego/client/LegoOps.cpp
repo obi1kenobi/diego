@@ -5,72 +5,128 @@
 
 #include <assert.h>
 
-LegoOp *
-LegoOp::Construct(std::istringstream &is)
+LegoOp::LegoOp(std::istream &is)
 {
     std::string type;
     is >> type;
     LegoOp *op = NULL;
     if (type == "CreateBrick") {
-        op = new LegoOpCreateBrick();
+        _type = CREATE_BRICK;
+        is >> _position;
+        is >> _size;
+        is >> _orientation;
+        is >> _color;
     } else if (type == "ModifyPosition") {
-        op = new LegoOpModifyPosition();
+        _type = MODIFY_POSITION;
+        is >> _brickID;
+        is >> _position;
+    } else if (type == "DeleteBrick") {
+        _type = DELETE_BRICK;
+        is >> _brickID;
     } else {
         std::cerr << "FATAL\n";
         throw std::exception();
     }
+}
 
-    op->Deserialize(is);
+LegoOp
+LegoOp::MakeCreateOp(const MfVec3i &position,
+                     const MfVec3i &size,
+                     LegoBrick::Orientation orientation,
+                     const MfVec3f &color)
+{
+    LegoOp op(CREATE_BRICK);
+    op._position = position;
+    op._size = size;
+    op._orientation = orientation;
+    op._color = color;
+    return op;
+}
+
+LegoOp
+LegoOp::MakeModifyPositionOp(uint64_t brickID, const MfVec3i &position)
+{
+    LegoOp op(MODIFY_POSITION);
+    op._brickID = brickID;
+    op._position = position;
+    return op;
+}
+
+LegoOp
+LegoOp::MakeModifySizeOp(uint64_t brickID, const MfVec3i &size)
+{
+    LegoOp op(MODIFY_SIZE);
+    op._brickID = brickID;
+    op._size = size;
+    return op;
+}
+
+LegoOp
+LegoOp::MakeModifyColorOp(uint64_t brickID, const MfVec3f &color)
+{
+    LegoOp op(MODIFY_COLOR);
+    op._brickID = brickID;
+    op._color = color;
+    return op;
+}
+
+LegoOp
+LegoOp::MakeModifyOrientationOp(uint64_t brickID, LegoBrick::Orientation orientation)
+{
+    LegoOp op(MODIFY_ORIENTATION);
+    op._brickID = brickID;
+    op._orientation = orientation;
+    return op;
+}
+
+LegoOp
+LegoOp::MakeDeleteBrickOp(uint64_t brickID)
+{
+    LegoOp op(DELETE_BRICK);
+    op._brickID = brickID;
     return op;
 }
 
 void
-LegoOp::Serialize(std::ostringstream &os)
+LegoOp::Serialize(std::ostream &os) const
 {
     switch (_type) {
-    case CREATE_BRICK: os << "CreateBrick"; break;
-    case MODIFY_POSITION: os << "ModifyPosition"; break;
-    case DELETE_BRICK: os << "DeleteBrick"; break;
+    case CREATE_BRICK: {
+        os << "CreateBrick"; 
+        os << " " << _position;
+        os << " " << _size;
+        os << " " << _orientation;
+        os << " " << _color;
+        os << std::endl;
+    } break;
+    case MODIFY_POSITION: {
+        os << "ModifyPosition"; 
+        os << " " << _brickID;
+        os << " " << _position;
+        os << std::endl;
+    } break;
+    case MODIFY_SIZE: {
+        os << "ModifySize"; 
+        os << " " << _brickID;
+        os << " " << _size;
+        os << std::endl;
+    } break;
+    case MODIFY_ORIENTATION: {
+        os << "ModifyOrientation"; 
+        os << " " << _brickID;
+        os << " " << _orientation;
+        os << std::endl;
+    } break;
+    case MODIFY_COLOR: {
+        os << "ModifyColor"; 
+        os << " " << _brickID;
+        os << " " << _color;
+        os << std::endl;
+    } break;
+    case DELETE_BRICK: {
+        os << "DeleteBrick"; 
+        os << " " << _brickID;
+        os << std::endl;
+    } break;
     }
-}
-
-void
-LegoOp::Deserialize(std::istringstream &is)
-{
-}
-
-void
-LegoOpCreateBrick::Serialize(std::ostringstream &os)
-{
-    LegoOp::Serialize(os);
-
-    os << " " << _position << " " << _size << " " << _orientation << " " << _color << "\n";
-}
-
-void
-LegoOpCreateBrick::Deserialize(std::istringstream &is)
-{
-    LegoOp::Deserialize(is);
-
-    is >> _position;
-    is >> _size;
-    is >> _orientation;
-    is >> _color;
-}
-
-void
-LegoOpModifyPosition::Serialize(std::ostringstream &os)
-{
-    LegoOp::Serialize(os);
-
-    os << " " << _brick << _position;
-}
-
-void
-LegoOpModifyPosition::Deserialize(std::istringstream &is)
-{
-    LegoOp::Deserialize(is);
-
-    is >> _brick;
-    is >> _position;
 }
