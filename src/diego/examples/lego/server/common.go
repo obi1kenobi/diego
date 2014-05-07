@@ -1,5 +1,9 @@
 package server
 
+import "bytes"
+import "strconv"
+import "diego/debug"
+
 type Vec2i struct {
   data [2]int32
 }
@@ -38,4 +42,73 @@ func (vec *Vec3i) Equal(other Vec3i) bool {
 
 func (vec *Vec3f) Equal(other Vec3f) bool {
   return vec.data == other.data
+}
+
+func serializeInt32(x int32, b *bytes.Buffer) {
+  b.WriteByte(legoDelim)
+  b.WriteString(strconv.FormatInt(int64(x), 10))
+}
+
+func deserializeInt32(b *bytes.Buffer) int32 {
+  val, err := b.ReadString(legoDelim)
+  debug.EnsureNoError(err)
+
+  res, err := strconv.ParseInt(val[:len(val)-1], 10, 32)
+  debug.EnsureNoError(err)
+
+  return int32(res)
+}
+
+func serializeInt64(x int64, b *bytes.Buffer) {
+  b.WriteByte(legoDelim)
+  b.WriteString(strconv.FormatInt(x, 10))
+}
+
+func deserializeInt64(b *bytes.Buffer) int64 {
+  val, err := b.ReadString(legoDelim)
+  debug.EnsureNoError(err)
+
+  res, err := strconv.ParseInt(val[:len(val)-1], 10, 64)
+  debug.EnsureNoError(err)
+
+  return res
+}
+
+func serializeFloat32(x float32, b *bytes.Buffer) {
+  b.WriteByte(legoDelim)
+  b.WriteString(strconv.FormatFloat(float64(x), 'g', -1, 32))
+}
+
+func deserializeFloat32(b *bytes.Buffer) float32 {
+  val, err := b.ReadString(legoDelim)
+  debug.EnsureNoError(err)
+
+  res, err := strconv.ParseFloat(val[:len(val)-1], 32)
+  debug.EnsureNoError(err)
+
+  return float32(res)
+}
+
+func (vec *Vec3i) serialize(b *bytes.Buffer) {
+  for _, x := range vec.data {
+    serializeInt32(x, b)
+  }
+}
+
+func (vec *Vec3i) deserialize(b *bytes.Buffer) {
+  for i := range vec.data {
+    vec.data[i] = deserializeInt32(b)
+  }
+}
+
+func (vec *Vec3f) serialize(b *bytes.Buffer) {
+  for _, x := range vec.data {
+    serializeFloat32(x, b)
+  }
+}
+
+func (vec *Vec3f) deserialize(b *bytes.Buffer) {
+  for i := range vec.data {
+    vec.data[i] = deserializeFloat32(b)
+  }
 }
