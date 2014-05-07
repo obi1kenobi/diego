@@ -27,14 +27,16 @@ func CreateDiegoCore(trailingDistance int, makeState func()resolver.State) *dieg
 
 func (dc *diegoCore) robustGetNamespace(ns string) *resolver.Resolver {
   rs, ok := dc.nsManager.GetNamespace(ns)
-  for !ok {
+  if !ok {
     rs := resolver.CreateResolver(dc.makeState, dc.trailingDistance)
-    ok = dc.nsManager.CreateNamespace(ns, rs)
-    if !ok {
-      // the create failed -- we lost the race to create a new namespace
-      // try getting the namespace again
-      // must try in a for-loop, because someone may have deleted it in the meantime
-      rs, ok = dc.nsManager.GetNamespace(ns)
+    for !ok {
+      ok = dc.nsManager.CreateNamespace(ns, rs)
+      if !ok {
+        // the create failed -- we lost the race to create a new namespace
+        // try getting the namespace again
+        // must try in a for-loop, because someone may have deleted it in the meantime
+        rs, ok = dc.nsManager.GetNamespace(ns)
+      }
     }
   }
   return rs
