@@ -3,6 +3,7 @@ package server
 import "bytes"
 import "strconv"
 import "diego/debug"
+import "diego/resolver"
 
 // Transactions
 type LegoTransaction struct {
@@ -18,7 +19,7 @@ func (xa *LegoTransaction) Id() int64 {
   return xa.id
 }
 
-func serializeTransaction(ns string, xa *LegoTransaction, b *bytes.Buffer) {
+func SerializeTransaction(ns string, xa *LegoTransaction, b *bytes.Buffer) {
   b.WriteString(ns)
   serializeInt64(xa.id, b)
   b.WriteByte('\n')
@@ -30,7 +31,7 @@ func serializeTransaction(ns string, xa *LegoTransaction, b *bytes.Buffer) {
   b.WriteByte('\n')
 }
 
-func deserializeTransaction(b *bytes.Buffer) (string, *LegoTransaction) {
+func DeserializeTransaction(b *bytes.Buffer) (string, *LegoTransaction) {
   xa := new(LegoTransaction)
   ns, err := b.ReadString(legoDelim)
   ns = ns[:len(ns)-1]
@@ -77,5 +78,19 @@ func deserializeTransaction(b *bytes.Buffer) (string, *LegoTransaction) {
     default:
       debug.Assert(false, "Unknown op type: %v", val)
     }
+  }
+}
+
+func SerializeServerResult(ns string, success bool, xas []resolver.Transaction,
+                           b *bytes.Buffer) {
+  if success {
+    b.WriteByte('1')
+  } else {
+    b.WriteByte('0')
+  }
+  b.WriteByte(legoDelim)
+
+  for _, x := range xas {
+    SerializeTransaction(ns, x.(*LegoTransaction), b)
   }
 }
