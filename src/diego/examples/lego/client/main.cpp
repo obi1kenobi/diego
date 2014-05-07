@@ -1,6 +1,6 @@
-#include "LegoUniverse.h"
-#include "MainWindow.h"
 #include "LegoApp.h"
+#include "LegoMainWindow.h"
+#include "LegoUniverse.h"
 
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QStyleFactory>

@@ -1,5 +1,5 @@
-#include "MainWindow.h"
-#include "moc_MainWindow.cpp"
+#include "LegoMainWindow.h"
+#include "moc_LegoMainWindow.cpp"
 #include "ui_MainWindow.h"
 
 #include "LegoApp.h"
