@@ -8,11 +8,12 @@ LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
     _xaMgr(this),
     _gridSize(gridSize),
     _XY(gridSize[0] * gridSize[1]),
-    _grid(gridSize[0] * gridSize[1] * gridSize[2])
+    _grid(gridSize[0] * gridSize[1] * gridSize[2], 0),
+    _brickID(0)
 {
 }
 
-LegoBrick *
+bool
 LegoUniverse::CreateBrick(const MfVec3i &position,
                           const MfVec3i &size,
                           LegoBrick::Orientation orientation,
@@ -22,15 +23,20 @@ LegoUniverse::CreateBrick(const MfVec3i &position,
 
     // Create transaction and send to server
     LegoTransaction xa;
-    xa.AddOp(LegoOpCreateBrick(position, size, orientation, color));
+    xa.AddOp(LegoOp::MakeCreateOp(position, size, orientation, color));
     bool success = _xaMgr.Execute(xa);
-    if (!success) {
-        return NULL;
-    }
+    return success;
+}
 
+void
+LegoUniverse::_CreateBrick(const MfVec3i &position,
+                           const MfVec3i &size,
+                           LegoBrick::Orientation orientation,
+                           const MfVec3f &color)
+{
     // Transaction validated on server; update state
-    ++_numBricks;
-    uint64_t brickID = _numBricks;
+    ++_brickID;
+    uint64_t brickID = _brickID;
     LegoBrick *brick = 
         new LegoBrick(&_xaMgr, brickID, position, size, orientation, color);
     _bricks.insert(_BrickMap::value_type(brickID, brick));
@@ -38,11 +44,10 @@ LegoUniverse::CreateBrick(const MfVec3i &position,
         for (int ys = 0; ys < size[1]; ++ys) {
             for (int zs = 0; zs < size[2]; ++zs) {
                 MfVec3i pos(position[0] + xs, position[1] + ys, position[2] + zs);
-                _WriteGrid(pos[0], pos[1], pos[2], brickID);
+                _WriteGrid(pos, brickID);
             }
         }
     }
-    return brick;
 }
 
 LegoBrick *
@@ -53,5 +58,17 @@ LegoUniverse::GetBrick(uint64_t brickId) const
         return NULL;
     } else {
         return it->second;
+    }
+}
+
+LegoBrick *
+LegoUniverse::GetBrickAt(const MfVec3i &position) const
+{
+    size_t gridPos = _GetIndex(position);
+    if (gridPos == size_t(-1)) {
+        return NULL;
+    } else {
+        uint64_t brickID = _grid[gridPos];
+        return GetBrick(brickID);
     }
 }

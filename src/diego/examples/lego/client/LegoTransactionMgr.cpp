@@ -40,6 +40,8 @@ LegoTransactionMgr::_SendToServer(const LegoTransaction &xa,
     std::cout << "Transaction sent:\n" << os.str() << std::endl;
 
     // XXX: receive response
+    // Assume for now we got back the same transaction
+    serverLog->push_back(xa);
 
     return true;
 }
@@ -49,16 +51,21 @@ LegoTransactionMgr::_Execute(const std::vector<LegoTransaction> &xas)
 {
     for (const auto &xa : xas) {
         const auto &ops = xa.GetOps();
-        for (auto *op : ops) {
-            switch (op->GetType()) {
-            case LegoOp::CREATE_BRICK: break;
-            case LegoOp::MODIFY_POSITION: break; {
-                LegoOpModifyPosition *modifyOp =
-                    dynamic_cast<LegoOpModifyPosition*>(op);
-                assert(modifyOp);
-                LegoBrick *brick = _universe->GetBrick(modifyOp->GetBrickID());
-                brick->_SetPosition(modifyOp->GetPosition());
+        for (const auto &op : ops) {
+            switch (op.GetType()) {
+            case LegoOp::CREATE_BRICK: {
+                _universe->_CreateBrick(op.GetPosition(),
+                                        op.GetSize(),
+                                        op.GetOrientation(),
+                                        op.GetColor());
             } break;
+            case LegoOp::MODIFY_POSITION: break; {
+                LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
+                brick->_SetPosition(op.GetPosition());
+            } break;
+            case LegoOp::MODIFY_SIZE: break;
+            case LegoOp::MODIFY_ORIENTATION: break;
+            case LegoOp::MODIFY_COLOR: break;
             case LegoOp::DELETE_BRICK: break;
             }
         }

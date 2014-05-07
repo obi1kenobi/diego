@@ -17,6 +17,8 @@ class LegoBrick {
         WEST,
     };
 
+    ~LegoBrick();
+
     uint64_t GetID() const {
         return _id;
     }

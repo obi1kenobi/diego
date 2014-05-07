@@ -5,11 +5,18 @@
 
 #include <vector>
 
+LegoBrick::~LegoBrick()
+{
+    LegoTransaction xa;
+    xa.AddOp(LegoOp::MakeDeleteBrickOp(GetID()));
+    _xaMgr->Execute(xa);
+}
+
 bool
 LegoBrick::SetPosition(const MfVec3i &position)
 {
     LegoTransaction xa;
-    xa.AddOp(LegoOpModifyPosition(this, position));
+    xa.AddOp(LegoOp::MakeModifyPositionOp(GetID(), position));
     bool success = _xaMgr->Execute(xa);
     return success;
 }
