@@ -263,6 +263,8 @@ func (op *testAndSetOp) resolveTestAndSet(id int64, log *list.List) (bool, resol
 
 func (kv *kvStore) Resolve(ancestorState *resolver.State, log *list.List,
                            current resolver.Transaction) (bool, resolver.Transaction) {
+  // debug.DPrintf(4, "Resolving xa: %+v", current)
+
   switch x := current.(type) {
   case *lwwSetOp:
     debug.Assert(false, "Shouldn't have to resolve lwwSetOp %s", debug.Stringify(x))

@@ -2,7 +2,7 @@ package debug
 
 import "fmt"
 
-const debugLevel = 0
+const debugLevel = 4
 const maxStringifyLength = 500
 const stringifyPreviewLength = 20
 
