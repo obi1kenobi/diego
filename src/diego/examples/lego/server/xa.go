@@ -4,6 +4,7 @@ import "bytes"
 import "strconv"
 import "diego/debug"
 import "diego/resolver"
+import "fmt"
 
 // Transactions
 type LegoTransaction struct {
@@ -32,6 +33,8 @@ func SerializeTransaction(ns string, xa *LegoTransaction, b *bytes.Buffer) {
 }
 
 func DeserializeTransaction(b *bytes.Buffer) (string, *LegoTransaction) {
+  fmt.Printf("DeserializeTransaction: %v\n", b);
+
   xa := new(LegoTransaction)
   ns, err := b.ReadString(legoDelim)
   ns = ns[:len(ns)-1]
