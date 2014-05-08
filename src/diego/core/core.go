@@ -52,7 +52,7 @@ SubmitTransaction - submits the specified transaction to the specified namespace
 func (dc *diegoCore) SubmitTransaction(ns string, t resolver.Transaction) (bool, []resolver.Transaction) {
   rs := dc.robustGetNamespace(ns)
   tid := t.Id()
-  ok := rs.SubmitTransaction(t)
+  ok, _ := rs.SubmitTransaction(t)
   _, transactions := rs.TransactionsSinceId(tid)
   return ok, transactions
 }
