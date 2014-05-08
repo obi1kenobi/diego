@@ -30,14 +30,16 @@ func CreateDiegoCore(trailingDistance int, makeState func()resolver.State) *Dieg
 
 func (dc *DiegoCore) robustGetNamespace(ns string) *resolver.Resolver {
   rs, ok := dc.nsManager.GetNamespace(ns)
-  for !ok {
+  if !ok {
     rs := resolver.CreateResolver(dc.makeState, dc.trailingDistance)
-    ok = dc.nsManager.CreateNamespace(ns, rs)
-    if !ok {
-      // the create failed -- we lost the race to create a new namespace
-      // try getting the namespace again
-      // must try in a for-loop, because someone may have deleted it in the meantime
-      rs, ok = dc.nsManager.GetNamespace(ns)
+    for !ok {
+      ok = dc.nsManager.CreateNamespace(ns, rs)
+      if !ok {
+        // the create failed -- we lost the race to create a new namespace
+        // try getting the namespace again
+        // must try in a for-loop, because someone may have deleted it in the meantime
+        rs, ok = dc.nsManager.GetNamespace(ns)
+      }
     }
   }
   return rs
@@ -98,7 +100,8 @@ CurrentState - calls the callback with the current state for the given namespace
   The callback MUST NOT MODIFY the state.
 
   This is a blocking operation that will prevent all other operations from executing until the
-  callback returns. May be expensive, USE AT YOUR OWN RISK.
+  callback returns. This operation is as expensive as your callback,
+  so USE AS QUICKLY AND SPARINGLY AS POSSIBLE!!!
 
   See resolver.CurrentState for details.
 
