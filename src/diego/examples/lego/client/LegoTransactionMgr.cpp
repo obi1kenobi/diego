@@ -23,14 +23,14 @@ bool
 LegoTransactionMgr::Execute(const LegoTransaction &xa)
 {
     std::vector<LegoTransaction> serverLog;
-    bool success = _SendToServer(xa, &serverLog);
+    std::string response = _SendToServer(xa);
+    bool success = _ParseResponse(response, &serverLog);
     _Execute(serverLog);
     return success;
 }
 
-bool
-LegoTransactionMgr::_SendToServer(const LegoTransaction &xa,
-                                  std::vector<LegoTransaction> *serverLog)
+std::string
+LegoTransactionMgr::_SendToServer(const LegoTransaction &xa)
 {
     // Assign transaction id
     uint64_t xaID = _xaIds;
@@ -46,35 +46,61 @@ LegoTransactionMgr::_SendToServer(const LegoTransaction &xa,
     std::cout << "Sending transaction:\n" << os.str() << std::endl;
     std::string response = _SendText(msg);
     std::cout << "Got response:\n" << response << std::endl;
+    return response;
+}
 
-    // XXX: receive response
-    // Assume for now we got back the same transaction
-    serverLog->push_back(xa);
+bool
+LegoTransactionMgr::_ParseResponse(const std::string &response,
+                                   std::vector<LegoTransaction> *serverLog)
+{
+    // Parse response
+    std::istringstream is(response);
 
-    return true;
+    // Was our transaction successful?
+    bool success;
+    is >> success;
+
+    // Parse transaction log
+    while (is.good()) {
+        uint64_t receivedNamespace;
+        is >> receivedNamespace;
+
+        uint64_t receivedXaID;
+        is >> receivedXaID;
+
+        LegoTransaction receivedXa;
+        while (is.peek() != '*' && is.good()) {
+            _SkipWhiteSpace(is);
+            char buffer[4096];
+            is.getline(buffer, sizeof(buffer));
+            std::cerr << "Read line: " << buffer << std::endl;
+            std::istringstream ops(buffer);
+            LegoOp op(ops);
+            if (!op.IsValid()) {
+                std::cerr << "ERROR: Could not parse op: " << buffer << std::endl;
+                return false;
+            }
+            receivedXa.AddOp(op);
+        }
+        serverLog->push_back(receivedXa);
+        ++_xaIds;
+
+        _SkipWhiteSpace(is);
+    }
+
+    return success;
 }
 
 std::string
 LegoTransactionMgr::_SendText(const std::string &text)
 {
-#if 0
-    QByteArray data;
-    QUrl params;
-
-    params.addQueryItem("userid","user");
-    params.addQueryItem("apiKey","key");
-    data.append(params.toString());
-    data.remove(0,1);
-#else
     QByteArray postData;
     postData.append(text.c_str());
-#endif
 
     QNetworkRequest request(QUrl("http://localhost:8080/lego"));
     request.setHeader(QNetworkRequest::ContentTypeHeader,"application/x-www-form-urlencoded");
 
     QNetworkAccessManager nwam;
-    std::cerr << "Launch post request: " << text << std::endl;
     QNetworkReply *reply = nwam.post(request, postData);
 
     QEventLoop loop;
@@ -85,24 +111,13 @@ LegoTransactionMgr::_SendText(const std::string &text)
     if (reply->error() == QNetworkReply::NoError) {
         rawData = reply->readAll();
     } else {
-        qDebug() << reply->errorString();
+        std::cerr << "Network request failed: " << reply->errorString().toStdString();
     }
 
     std::string response =
         QTextCodec::codecForHtml(rawData)->toUnicode(rawData).toStdString();
-    qDebug() << response.c_str();
 
     return response;
-#if 0
-    std::cerr << "Done.\n";
-    std::cerr << "Waiting for a reply...\n";
-    while (!reply->isFinished()) {}
-    std::cerr << "Done.\n";
-    char *responseData = reply->readAll().data();
-    std::cerr << "Got response:\n";
-    std::cerr << responseData << std::endl;
-    return std::string(responseData);
-#endif
 }
 
 void
@@ -129,5 +144,13 @@ LegoTransactionMgr::_Execute(const std::vector<LegoTransaction> &xas)
             }
         }
         ++_xaIds;
+    }
+}
+
+void
+LegoTransactionMgr::_SkipWhiteSpace(std::istream &input)
+{
+    while (input.good() && std::isspace(input.peek())) {
+        input.get();
     }
 }

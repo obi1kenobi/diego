@@ -15,10 +15,12 @@ class LegoTransactionMgr {
     bool Execute(const LegoTransaction &xa);
 
   private:
-    bool _SendToServer(const LegoTransaction &xa, 
-                       std::vector<LegoTransaction> *serverLog);
+    std::string _SendToServer(const LegoTransaction &xa);
+    bool _ParseResponse(const std::string &response,
+                        std::vector<LegoTransaction> *serverLog);
     void _Execute(const std::vector<LegoTransaction> &xas);
     std::string _SendText(const std::string &text);
+    void _SkipWhiteSpace(std::istream &input);
 
     LegoUniverse *_universe;
     uint64_t _xaIds;
