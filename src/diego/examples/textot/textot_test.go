@@ -5,7 +5,7 @@ import "strings"
 import "strconv"
 import "diego/tests"
 import "diego/resolver"
-
+import "diego/types"
 
 const trailingDistance = 50
 
@@ -14,17 +14,17 @@ func setup()(*resolver.Resolver, *textState) {
 }
 
 func makeResolver()*resolver.Resolver {
-  return resolver.CreateResolver(makeState, trailingDistance)
+  return resolver.CreateResolver(makeState, trailingDistance, "")
 }
 
-func stateEquals(a, b resolver.State)bool {
+func stateEquals(a, b types.State)bool {
   txt := a.(*textState)
   txt2 := b.(*textState)
   return txt.str == txt2.str && txt.id == txt2.id
 }
 
-func textPredicate(start, finish int, str string) func(*testing.T, resolver.State)bool {
-  return func(t *testing.T, s resolver.State)bool {
+func textPredicate(start, finish int, str string) func(*testing.T, types.State)bool {
+  return func(t *testing.T, s types.State)bool {
     txt := s.(*textState).str
     if finish == -1 {
       finish = len(txt)
