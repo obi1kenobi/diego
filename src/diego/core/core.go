@@ -28,7 +28,7 @@ func CreateDiegoCore(trailingDistance int, makeState func()resolver.State) *dieg
 func (dc *diegoCore) robustGetNamespace(ns string) *resolver.Resolver {
   rs, ok := dc.nsManager.GetNamespace(ns)
   if !ok {
-    rs := resolver.CreateResolver(dc.makeState, dc.trailingDistance)
+    rs = resolver.CreateResolver(dc.makeState, dc.trailingDistance)
     for !ok {
       ok = dc.nsManager.CreateNamespace(ns, rs)
       if !ok {
