@@ -91,7 +91,7 @@ func SerializeServerResult(ns string, success bool, xas []resolver.Transaction,
   } else {
     b.WriteByte('0')
   }
-  b.WriteByte(legoDelim)
+  b.WriteByte('\n')
 
   for _, x := range xas {
     SerializeTransaction(ns, x.(*LegoTransaction), b)
