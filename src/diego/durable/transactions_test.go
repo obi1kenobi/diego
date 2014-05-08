@@ -165,3 +165,25 @@ func TestLoadExisting(t *testing.T) {
   expectNTransactions(t, maxChunkLength, tl)
   tl.Close()
 }
+
+func TestLoadNoneExisting(t *testing.T) {
+  // ensure that when there are no transactions, ReadAll returns no transactions
+  const basePath = "../../../_test/durable/load_none_existing"
+  os.RemoveAll(basePath)
+  setup()
+
+  tl := CreateTransactionLogger(basePath)
+  tl.assertValid()
+
+  expectNFilesAtPath(t, 2, basePath)
+  expectNFilePairs(t, 1, tl)
+
+  tl.Close()
+  tl = CreateTransactionLogger(basePath)
+  tl.assertValid()
+
+  expectNFilesAtPath(t, 2, basePath)
+  expectNFilePairs(t, 1, tl)
+  expectNTransactions(t, 0, tl)
+  tl.Close()
+}
