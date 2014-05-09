@@ -2,6 +2,7 @@
 #include "LegoOps.h"
 #include "LegoTransaction.h"
 #include "LegoUniverse.h"
+#include "LegoNotices.h"
 
 #include <QtCore/QEventLoop>
 #include <QtCore/QObject>
@@ -82,8 +83,9 @@ LegoTransactionMgr::_ParseResponse(const std::string &response,
             }
             receivedXa.AddOp(op);
         }
-        serverLog->push_back(receivedXa);
-        ++_xaIds;
+        if (!receivedXa.GetOps().empty()) {
+            serverLog->push_back(receivedXa);
+        }
 
         _SkipWhiteSpace(is);
     }
@@ -145,6 +147,7 @@ LegoTransactionMgr::_Execute(const std::vector<LegoTransaction> &xas)
         }
         ++_xaIds;
     }
+    LegoBricksChangedNotice().Send();
 }
 
 void

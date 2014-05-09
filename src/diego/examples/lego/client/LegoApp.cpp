@@ -1,6 +1,7 @@
 #include "LegoApp.h"
-#include "LegoUniverse.h"
 #include "LegoMainWindow.h"
+#include "LegoNotices.h"
+#include "LegoUniverse.h"
 
 #include <cassert>
 
@@ -16,10 +17,12 @@ LegoApp::LegoApp(LegoMainWindow *mainWindow) :
 
     _CreateUniverse();
     _CreateScene();
+    _RegisterNoticeHandlers();
 }
 
 LegoApp::~LegoApp()
 {
+    _UnregisterNoticeHandlers();
     delete _universe; _universe = NULL;
 }
 
@@ -170,6 +173,12 @@ LegoApp::_CreateScene()
     _sceneMeshes = new SoSeparator();
     sceneMeshesRoot->addChild(_sceneMeshes);
 
+    // Lego bricks
+    _brickCoords = new SoCoordinate3();
+    _brickIFS = new SoIndexedFaceSet();
+    _sceneMeshes->addChild(_brickCoords);
+    _sceneMeshes->addChild(_brickIFS);
+
     // The scene "environment", i.e., ground plane, etc.
     // It will only receive shadows
     SoShadowStyle *envShadowStyle = new SoShadowStyle();
@@ -303,4 +312,99 @@ LegoApp::_DrawBackground()
     glVertex2f(-1,  1);
 
     glEnd();
+}
+
+void
+LegoApp::_RegisterNoticeHandlers()
+{
+    _noticeKeys.push_back(
+        SfNoticeMgr::Get().Register(this, 
+            &LegoApp::_ProcessLegoBricksChangedNotice));
+}
+
+void
+LegoApp::_UnregisterNoticeHandlers()
+{
+    for (const auto &key : _noticeKeys) {
+        SfNoticeMgr::Get().Cancel(key);
+    }
+}
+
+inline
+static
+void
+_AddTriangle(int32_t *indices, uint32_t *startIndex, uint32_t v0, uint32_t v1, uint32_t v2)
+{
+    indices[(*startIndex)++] = v0;
+    indices[(*startIndex)++] = v1;
+    indices[(*startIndex)++] = v2;
+    indices[(*startIndex)++] = -1;
+}
+
+void
+LegoApp::_AddBrick(LegoBrick *brick,
+                   uint32_t brickIndex,
+                   SbVec3f *coords,
+                   int32_t *indices)
+{
+    const MfVec3i &pos = brick->GetPosition();
+    const MfVec3i &size = brick->GetSize();
+
+    //         6-----7
+    //       / |   / |
+    //     2------3  |
+    //     |   4- |- 5
+    //     | /    | / 
+    //     0------1
+    float xStart = pos[0];
+    float yStart = pos[1];
+    float zStart = pos[2];
+    float xFaceSize = size[0];
+    float yFaceSize = size[1];
+    float zFaceSize = size[2];
+
+    uint32_t startVertex = brickIndex * 8;
+    uint32_t vindex = startVertex;
+    coords[vindex++] = SbVec3f(xStart,             yStart,             zStart + zFaceSize);
+    coords[vindex++] = SbVec3f(xStart + xFaceSize, yStart,             zStart + zFaceSize);
+    coords[vindex++] = SbVec3f(xStart,             yStart + yFaceSize, zStart + zFaceSize);
+    coords[vindex++] = SbVec3f(xStart + xFaceSize, yStart + yFaceSize, zStart + zFaceSize);
+    coords[vindex++] = SbVec3f(xStart,             yStart,             zStart);
+    coords[vindex++] = SbVec3f(xStart + xFaceSize, yStart,             zStart);
+    coords[vindex++] = SbVec3f(xStart,             yStart + yFaceSize, zStart);
+    coords[vindex++] = SbVec3f(xStart + xFaceSize, yStart + yFaceSize, zStart);
+
+    uint32_t iindex = brickIndex * 12 * 4;
+    _AddTriangle(indices, &iindex, startVertex + 0, startVertex + 1, startVertex + 2);
+    _AddTriangle(indices, &iindex, startVertex + 2, startVertex + 1, startVertex + 3);
+    _AddTriangle(indices, &iindex, startVertex + 5, startVertex + 4, startVertex + 7);
+    _AddTriangle(indices, &iindex, startVertex + 7, startVertex + 4, startVertex + 6);
+    _AddTriangle(indices, &iindex, startVertex + 4, startVertex + 0, startVertex + 6);
+    _AddTriangle(indices, &iindex, startVertex + 6, startVertex + 0, startVertex + 2);
+    _AddTriangle(indices, &iindex, startVertex + 1, startVertex + 5, startVertex + 3);
+    _AddTriangle(indices, &iindex, startVertex + 3, startVertex + 5, startVertex + 7);
+    _AddTriangle(indices, &iindex, startVertex + 2, startVertex + 3, startVertex + 6);
+    _AddTriangle(indices, &iindex, startVertex + 6, startVertex + 3, startVertex + 7);
+    _AddTriangle(indices, &iindex, startVertex + 4, startVertex + 5, startVertex + 0);
+    _AddTriangle(indices, &iindex, startVertex + 0, startVertex + 5, startVertex + 1);
+}
+
+void
+LegoApp::_ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &)
+{
+    const auto &bricks = _universe->GetBricks();
+
+    _brickCoords->point.setNum(8 * bricks.size());
+    SbVec3f *coords = _brickCoords->point.startEditing();
+
+    _brickIFS->coordIndex.setNum(12 * 4 * bricks.size());
+    int32_t *indices = _brickIFS->coordIndex.startEditing();
+
+    for (uint32_t i = 0; i < bricks.size(); ++i) {
+        auto *brick = bricks[i];
+        _AddBrick(brick, i, coords, indices);
+    }
+
+    _brickCoords->point.finishEditing();
+    _brickIFS->coordIndex.finishEditing();
 }

@@ -1,6 +1,7 @@
 #ifndef __LEGO_APP_H__
 #define __LEGO_APP_H__
 
+#include "NoticeMgr.h"
 #include "Vec3d.h"
 
 #include <Inventor/So.h>
@@ -14,6 +15,8 @@
 #include <vector>
 
 class QWidget;
+class LegoBrick;
+class LegoBricksChangedNotice;
 class LegoMainWindow;
 class LegoUniverse;
 
@@ -38,10 +41,26 @@ class LegoApp {
     };
 
     void _CreateUniverse();
+
     void _CreateScene();
     SoSeparator * _CreatePlatformBed();
+
     static void _BeginRenderSceneCB(void *userData, SoAction *action);
+
     void _DrawBackground();
+
+    void _RegisterNoticeHandlers();
+
+    void _UnregisterNoticeHandlers();
+
+    void _ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &n);
+
+    void _AddBrick(LegoBrick *brick,
+                   uint32_t brickIndex,
+                   SbVec3f *coords,
+                   int32_t *indices);
+
+    std::vector<SfNoticeMgr::Key> _noticeKeys;
 
     MfVec3d                     _bedSize;
     LegoMainWindow             *_mainWindow;
@@ -64,6 +83,8 @@ class LegoApp {
     SoSwitch                   *_sceneEnvSwitch;
     SoSwitch                   *_previewEnvSwitch;
     SoDrawStyle                *_sceneDrawStyle;
+    SoCoordinate3              *_brickCoords;
+    SoIndexedFaceSet           *_brickIFS;
 };
 
 #endif // __LEGO_APP_H__

@@ -52,8 +52,9 @@ LegoUniverse::_CreateBrick(const MfVec3i &position,
     ++_brickID;
     uint64_t brickID = _brickID;
     LegoBrick *brick = 
-        new LegoBrick(&_xaMgr, brickID, position, size, orientation, color);
-    _bricks.insert(_BrickMap::value_type(brickID, brick));
+        new LegoBrick(this, brickID, position, size, orientation, color);
+    _bricks.push_back(brick);
+    _brickMap.insert(_BrickMap::value_type(brickID, brick));
     for (int xs = 0; xs < size[0]; ++xs) {
         for (int ys = 0; ys < size[1]; ++ys) {
             for (int zs = 0; zs < size[2]; ++zs) {
@@ -67,8 +68,8 @@ LegoUniverse::_CreateBrick(const MfVec3i &position,
 LegoBrick *
 LegoUniverse::GetBrick(uint64_t brickId) const
 {
-    auto it = _bricks.find(brickId);
-    if (it == _bricks.end()) {
+    auto it = _brickMap.find(brickId);
+    if (it == _brickMap.end()) {
         return NULL;
     } else {
         return it->second;

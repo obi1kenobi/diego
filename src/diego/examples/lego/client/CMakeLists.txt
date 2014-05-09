@@ -9,12 +9,16 @@ set(LIBRARY_CPP_FILES
     LegoApp.cpp
     LegoBrick.cpp
     LegoMainWindow.cpp
+    LegoNotices.cpp
     LegoOps.cpp
     LegoTransaction.cpp
     LegoTransactionMgr.cpp
     LegoUniverse.cpp
     Matrix4d.cpp
     Mesh.cpp
+    Notice.cpp
+    NoticeMgr.cpp
+    Singleton.cpp
     STLWriter.cpp
     TriBox3.cpp
     TriangleMesh.cpp

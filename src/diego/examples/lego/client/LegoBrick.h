@@ -6,6 +6,7 @@
 #include "Vec3f.h"
 #include "Vec3i.h"
 
+class LegoUniverse;
 class LegoTransactionMgr;
 
 class LegoBrick {
@@ -47,20 +48,12 @@ class LegoBrick {
     friend class LegoUniverse;
     friend class LegoTransactionMgr;
 
-    LegoBrick(LegoTransactionMgr *xaMgr,
+    LegoBrick(LegoUniverse *universe,
               uint64_t id,
               const MfVec3i &position,
               const MfVec3i &size,
               Orientation orientation,
-              const MfVec3f &color) :
-        _xaMgr(xaMgr),
-        _id(id),
-        _position(position),
-        _size(size),
-        _orientation(orientation),
-        _color(color)
-    {
-    }
+              const MfVec3f &color);
 
     void _SetPosition(const MfVec3i &position) {
         _position = position;
@@ -75,6 +68,7 @@ class LegoBrick {
         _color = color;
     }
 
+    LegoUniverse *_universe;
     LegoTransactionMgr *_xaMgr;
     uint64_t _id;
     MfVec3i _position;

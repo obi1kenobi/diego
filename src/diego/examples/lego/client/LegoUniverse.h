@@ -15,6 +15,10 @@ class LegoUniverse {
         return _id;
     }
 
+    LegoTransactionMgr * GetTransactionMgr() {
+        return &_xaMgr;
+    }
+
     bool ProcessOp(const std::string &op);
 
     bool CreateBrick(const MfVec3i &position,
@@ -25,6 +29,10 @@ class LegoUniverse {
     LegoBrick * GetBrick(uint64_t brickId) const;
 
     LegoBrick * GetBrickAt(const MfVec3i &position) const;
+
+    const std::vector<LegoBrick*> & GetBricks() const {
+        return _bricks;
+    }
 
   private:
     friend class LegoTransactionMgr;
@@ -58,7 +66,8 @@ class LegoUniverse {
     LegoTransactionMgr _xaMgr;
     MfVec3i _gridSize;
     size_t _XY;
-    _BrickMap _bricks;
+    std::vector<LegoBrick*> _bricks;
+    _BrickMap _brickMap;
     uint64_t _brickID;
     std::vector<uint64_t> _grid;
 };
