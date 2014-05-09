@@ -38,6 +38,7 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
   fmt.Printf("Got message: %v\n", buf)
 
   command, err := buf.ReadString('\n')
+  command = command[:len(command)-1]
   debug.EnsureNoError(err)
   resultBuf := &bytes.Buffer{}
 
