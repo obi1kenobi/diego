@@ -18,7 +18,7 @@ class LegoBrick {
         WEST,
     };
 
-    ~LegoBrick();
+    bool Destroy();
 
     uint64_t GetID() const {
         return _id;
@@ -45,6 +45,8 @@ class LegoBrick {
     }
 
   private:
+    ~LegoBrick();
+
     friend class LegoUniverse;
     friend class LegoTransactionMgr;
 
@@ -66,6 +68,10 @@ class LegoBrick {
     }
     void _SetColor(const MfVec3f &color) {
         _color = color;
+    }
+
+    void _Destroy() {
+        delete this;
     }
 
     LegoUniverse *_universe;

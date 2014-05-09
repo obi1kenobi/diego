@@ -14,6 +14,6 @@ main()
     brick->SetSize(MfVec3i(4, 2, 1));
     brick->SetOrientation(LegoBrick::WEST);
     brick->SetColor(MfVec3f(1, 1, 0));
-    delete brick;
+    brick->Destroy();
     return 0;
 }

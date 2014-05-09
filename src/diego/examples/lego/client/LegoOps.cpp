@@ -21,6 +21,18 @@ LegoOp::LegoOp(std::istream &is)
         _type = MODIFY_POSITION;
         is >> _brickID;
         is >> _position;
+    } else if (type == "ModifySize") {
+        _type = MODIFY_SIZE;
+        is >> _brickID;
+        is >> _size;
+    } else if (type == "ModifyOrientation") {
+        _type = MODIFY_ORIENTATION;
+        is >> _brickID;
+        is >> _orientation;
+    } else if (type == "ModifyColor") {
+        _type = MODIFY_COLOR;
+        is >> _brickID;
+        is >> _color;
     } else if (type == "DeleteBrick") {
         _type = DELETE_BRICK;
         is >> _brickID;

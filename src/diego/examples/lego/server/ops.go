@@ -4,9 +4,9 @@ import "bytes"
 
 const createBrick = "CreateBrick"
 const deleteBrick = "DeleteBrick"
-const modifyBrickColor = "BrickColor"
-const modifyBrickOrientation = "BrickOrientation"
-const modifyBrickSize = "BrickSize"
+const modifyBrickColor = "ModifyBrickColor"
+const modifyBrickOrientation = "ModifyBrickOrientation"
+const modifyBrickSize = "ModifyBrickSize"
 
 // Ops
 type LegoOpCreateBrick struct {
