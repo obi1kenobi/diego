@@ -3,8 +3,7 @@ package durable
 import "os"
 import "testing"
 import "encoding/gob"
-
-import "diego/resolver"
+import "diego/types"
 
 type testTx struct {
   IdNum int64
@@ -41,7 +40,7 @@ func expectNFilePairs(t *testing.T, n int, tl *TransactionLogger) {
 
 func expectNTransactions(t *testing.T, n int64, tl *TransactionLogger) {
   count := int64(0)
-  callback := func(tr resolver.Transaction) {
+  callback := func(tr types.Transaction) {
     if tr.Id() != count {
       t.Errorf("Expected ID %d (in order) but got ID %d", count, tr.Id())
     }
@@ -163,5 +162,27 @@ func TestLoadExisting(t *testing.T) {
   expectNFilesAtPath(t, 2, basePath)
   expectNFilePairs(t, 1, tl)
   expectNTransactions(t, maxChunkLength, tl)
+  tl.Close()
+}
+
+func TestLoadNoneExisting(t *testing.T) {
+  // ensure that when there are no transactions, ReadAll returns no transactions
+  const basePath = "../../../_test/durable/load_none_existing"
+  os.RemoveAll(basePath)
+  setup()
+
+  tl := CreateTransactionLogger(basePath)
+  tl.assertValid()
+
+  expectNFilesAtPath(t, 2, basePath)
+  expectNFilePairs(t, 1, tl)
+
+  tl.Close()
+  tl = CreateTransactionLogger(basePath)
+  tl.assertValid()
+
+  expectNFilesAtPath(t, 2, basePath)
+  expectNFilePairs(t, 1, tl)
+  expectNTransactions(t, 0, tl)
   tl.Close()
 }

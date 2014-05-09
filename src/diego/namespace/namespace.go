@@ -52,9 +52,16 @@ func (ns *NamespaceManager) GetNamespace(name string) (*resolver.Resolver, bool)
 /*
 RemoveNamespace - Removes the specified namespace, if it exists
 */
-func (ns *NamespaceManager) RemoveNamespace(name string) {
+func (ns *NamespaceManager) RemoveNamespace(name string) bool {
   ns.mu.Lock()
   defer ns.mu.Unlock()
 
+  resolver, ok := ns.namespaces[name]
+  if !ok {
+    return false
+  }
+
+  resolver.Close()
   delete(ns.namespaces, name)
+  return true
 }

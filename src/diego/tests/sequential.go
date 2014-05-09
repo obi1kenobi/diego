@@ -5,24 +5,25 @@ import "testing"
 import "testing/quick"
 import "math/rand"
 import "diego/resolver"
+import "diego/types"
 
 /*
 RunSequentialTest - Test harness for sequential tests
   t = test object
   rs = Resolver object to use
   data = TestDataItems to use
-  s = the initial resolver.State upon which to apply resolved transactions
+  s = the initial types.State upon which to apply resolved transactions
   equals = function that determines if two copies of the state are the same
 */
 func RunSequentialTest(t *testing.T, rs *resolver.Resolver,
-                       data []TestDataItem, s resolver.State,
-                       equals func(resolver.State, resolver.State)bool) bool {
+                       data []TestDataItem, s types.State,
+                       equals func(types.State, types.State)bool) bool {
   return runTest(t, rs, data, s, equals, false, nil)
 }
 
 func runTest(t *testing.T, rs *resolver.Resolver,
-             data []TestDataItem, s resolver.State,
-             equals func(resolver.State, resolver.State)bool,
+             data []TestDataItem, s types.State,
+             equals func(types.State, types.State)bool,
              dynamicTransactionIds bool, rnd *rand.Rand) bool {
   success := true
 
@@ -59,9 +60,9 @@ RunRandomizedSequentialTests - Test harness for randomized sequential tests
 */
 func RunRandomizedSequentialTests(t *testing.T,
                                   makeResolver func()*resolver.Resolver,
-                                  makeState func()resolver.State,
+                                  makeState func()types.State,
                                   makeTestData func([]TestDataItem, *rand.Rand),
-                                  equals func(resolver.State, resolver.State)bool) {
+                                  equals func(types.State, types.State)bool) {
 
   config := new(quick.Config)
 
@@ -85,11 +86,11 @@ func RunRandomizedSequentialTests(t *testing.T,
 }
 
 func makeRandomizedTest(t *testing.T, rnd *rand.Rand,
-                        equals func(resolver.State, resolver.State)bool) func(rs *resolver.Resolver,
+                        equals func(types.State, types.State)bool) func(rs *resolver.Resolver,
                                                                               data []TestDataItem,
-                                                                              s resolver.State)bool {
+                                                                              s types.State)bool {
 
-  f := func(rs *resolver.Resolver, data []TestDataItem, s resolver.State)bool {
+  f := func(rs *resolver.Resolver, data []TestDataItem, s types.State)bool {
     return runTest(t, rs, data, s, equals, true, rnd)
   }
   return f
