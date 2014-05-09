@@ -3,6 +3,8 @@ package durable
 import "os"
 import "testing"
 import "encoding/gob"
+
+import "diego/debug"
 import "diego/types"
 
 type testTx struct {
@@ -19,10 +21,10 @@ func (tx *testTx) SetId(id int64) {
 
 func expectNFilesAtPath(t *testing.T, n int, path string) {
   dir, err := os.Open(path)
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   names, err := dir.Readdirnames(0)
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   if len(names) != n {
     t.Errorf("Expected %d files; found %d: %v", n, len(names), names)
