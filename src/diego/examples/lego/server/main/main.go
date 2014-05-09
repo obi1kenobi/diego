@@ -54,6 +54,8 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
     ns, id := server.DeserializeTransactionsSince(buf)
     xas, _ := dc.TransactionsSinceId(ns, id)
     server.SerializeTransactionSlice(ns, xas, resultBuf)
+    _, err = resultBuf.WriteTo(w)
+    debug.EnsureNoError(err)
   default:
     fmt.Printf("ERROR: Unrecognized command: '%s'", command)
   }

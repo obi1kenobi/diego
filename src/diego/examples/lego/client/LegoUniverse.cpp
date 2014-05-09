@@ -11,6 +11,7 @@ LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
     _grid(gridSize[0] * gridSize[1] * gridSize[2], 0),
     _brickID(0)
 {
+    _xaMgr.CatchupWithServer();
 }
 
 bool

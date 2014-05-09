@@ -100,4 +100,6 @@ func SerializeTransactionSlice(ns string, xas []types.Transaction, b *bytes.Buff
   for _, x := range xas {
     SerializeTransaction(ns, x.(*LegoTransaction), b)
   }
+  b.WriteByte('#')
+  b.WriteByte('\n')
 }

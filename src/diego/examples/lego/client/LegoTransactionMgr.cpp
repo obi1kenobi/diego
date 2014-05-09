@@ -1,4 +1,6 @@
 #include "LegoTransactionMgr.h"
+
+#include "Debug.h"
 #include "LegoOps.h"
 #include "LegoTransaction.h"
 #include "LegoUniverse.h"
@@ -18,16 +20,24 @@ LegoTransactionMgr::LegoTransactionMgr(LegoUniverse *universe) :
     _universe(universe),
     _xaIds(0)
 {
-    CatchupWithServer();
 }
 
 bool
 LegoTransactionMgr::Execute(const LegoTransaction &xa)
 {
+    // Send transaction to server
     std::string response = _SendToServer(xa);
+
+    // Was our transaction successful?
+    std::istringstream is(response);
+    bool success;
+    is >> success;
+
+    // Parse response (server log) and execute transactions from it
     std::vector<LegoTransaction> serverLog;
-    bool success = _ParseResponse(response, &serverLog);
+    _ParseResponse(is, &serverLog);
     _Execute(serverLog);
+
     return success;
 }
 
@@ -42,9 +52,9 @@ LegoTransactionMgr::_SendToServer(const LegoTransaction &xa)
 
     // Send over wire
     std::string msg = os.str();
-    std::cout << "Sending transaction:\n" << os.str() << std::endl;
-    std::string response = _SendText(msg);
-    std::cout << "Got response:\n" << response << std::endl;
+    SfDPrintf(1, "Sending transaction:\n%s", msg.c_str());
+    std::string response = _SendMessage(msg);
+    SfDPrintf(1, "Got response:\n%s", response.c_str());
 
     return response;
 }
@@ -65,54 +75,81 @@ LegoTransactionMgr::_EmitXaEpilogue(std::ostream &os)
     os << "*\n";
 }
 
-bool
-LegoTransactionMgr::_ParseResponse(const std::string &response,
+void
+LegoTransactionMgr::_ParseResponse(std::istream &is,
                                    std::vector<LegoTransaction> *serverLog)
 {
-    // Parse response
-    std::istringstream is(response);
-
-    // Was our transaction successful?
-    bool success;
-    is >> success;
-
     // Parse transaction log
-    while (is.good()) {
-        uint64_t receivedNamespace;
-        is >> receivedNamespace;
+    //
+    // Format of response is
+    //
+    // <namespace_id> <xa_id>
+    // op
+    // op
+    // ...
+    // *
+    // #
+    //
+    // '*' is the sentinel that represents end of transaction
+    // '#' is the sentinel that represents end of response
+    SfDPrintf(1, "Parsing response:\n");
+    int numXas = 0;
+    while (is.peek() != '#' && is.good()) {
+        // Skip white space or/and newline
+        _SkipWhiteSpace(is);
 
-        uint64_t receivedXaID;
-        is >> receivedXaID;
+        // Parse namespace id
+        int recNamespace;
+        is >> recNamespace;
+        SfDPrintf(1, "Namespace: %d\n", recNamespace);
 
-        LegoTransaction receivedXa;
-        while (is.peek() != '*' && is.good()) {
-            _SkipWhiteSpace(is);
+        // Parse transaction id
+        int recXaID;
+        is >> recXaID;
+        SfDPrintf(1, "XaID: %d\n", recXaID);
+
+        // Skip white space or/and newline
+        _SkipWhiteSpace(is);
+
+        LegoTransaction recXa;
+        while (is.good()) {
+            // Check for "end of ops" sentinel
+            if (is.peek() == '*') {
+                is.get();
+                break;
+            }
+
+            // Read op line
             char buffer[4096];
             is.getline(buffer, sizeof(buffer));
-            std::cerr << "Read line: " << buffer << std::endl;
+            SfDPrintf(1, "Read line: %s\n", buffer);
+
+            // Deserialize op
             std::istringstream ops(buffer);
             LegoOp op(ops);
-            if (!op.IsValid()) {
-                std::cerr << "ERROR: Could not parse op: " << buffer << std::endl;
-                return false;
-            }
-            receivedXa.AddOp(op);
+            assert(op.IsValid());
+
+            // Add to transaction's op list
+            recXa.AddOp(op);
         }
-        if (!receivedXa.GetOps().empty()) {
-            serverLog->push_back(receivedXa);
-        }
+
+        // Add transaction to log
+        assert(!recXa.GetOps().empty());
+        serverLog->push_back(recXa);
+        ++numXas;
 
         _SkipWhiteSpace(is);
     }
-
-    return success;
+    SfDPrintf(1, "Parsed %d\n", numXas);
 }
 
 std::string
-LegoTransactionMgr::_SendText(const std::string &text)
+LegoTransactionMgr::_SendMessage(const std::string &message)
 {
+    SfDPrintf(1, "Sending message to server:\n%s", message.c_str());
+
     QByteArray postData;
-    postData.append(text.c_str());
+    postData.append(message.c_str());
 
     QNetworkRequest request(QUrl("http://localhost:8080/lego"));
     request.setHeader(QNetworkRequest::ContentTypeHeader,"application/x-www-form-urlencoded");
@@ -134,13 +171,21 @@ LegoTransactionMgr::_SendText(const std::string &text)
     std::string response =
         QTextCodec::codecForHtml(rawData)->toUnicode(rawData).toStdString();
 
+    SfDPrintf(1, "Got response:\n%s", response.c_str());
+
     return response;
 }
 
 void
 LegoTransactionMgr::_Execute(const std::vector<LegoTransaction> &xas)
 {
+    if (xas.empty()) {
+        return;
+    }
+
+    int numXas = 0;
     for (const auto &xa : xas) {
+        ++numXas;
         const auto &ops = xa.GetOps();
         for (const auto &op : ops) {
             switch (op.GetType()) {
@@ -172,8 +217,10 @@ LegoTransactionMgr::_Execute(const std::vector<LegoTransaction> &xas)
             } break;
             }
         }
+        _xas.push_back(xa);
         ++_xaIds;
     }
+    SfDPrintf(1, "Executed %d transactions\n", numXas);
     LegoBricksChangedNotice().Send();
 }
 
@@ -188,12 +235,25 @@ LegoTransactionMgr::_SkipWhiteSpace(std::istream &input)
 void
 LegoTransactionMgr::CatchupWithServer()
 {
+    // Request all transactions since the last one we've executed.
+    //
+    // Format of request is:
+    //
+    // TransactionsSince
+    // <namespace_id> <starting_xa_id>
+    //
+    // The transactions sent are all transacitons with given id or higher.
     std::ostringstream os;
     os << "TransactionsSince\n";
     os << _universe->GetID() << " " << _xaIds << "\n";
 
-    std::string response = _SendText(os.str());
+    // Send message to server 
+    std::string response = _SendMessage(os.str());
+
+    // Parse response and execute received transactions if any
+    std::istringstream is(response);
     std::vector<LegoTransaction> serverLog;
-    bool success = _ParseResponse(response, &serverLog);
+    _ParseResponse(is, &serverLog);
+    SfDPrintf(1, "Received %d transactions from server\n", serverLog.size());
     _Execute(serverLog);
 }
