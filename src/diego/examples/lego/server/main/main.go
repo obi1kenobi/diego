@@ -13,18 +13,18 @@ var dc *core.DiegoCore
 const address = ":8080"
 
 func main() {
-  fmt.Printf("Creating diego...\n")
+  debug.DPrintf(0, "Creating diego...")
   dc = core.CreateDiegoCore(500, server.MakeState)
-  fmt.Printf("Done.\n")
+  debug.DPrintf(0, "Done.")
 
-  fmt.Printf("Launching httpd...\n")
+  debug.DPrintf(0, "Launching httpd...")
   http.HandleFunc("/lego", legoConnectionHandler)
   http.ListenAndServe(address, nil)
-  fmt.Printf("Done.\n")
+  debug.DPrintf(0, "Done.")
 }
 
 func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
-  fmt.Printf("Begin callback\n")
+  debug.DPrintf(0, "Begin callback")
 
   b, err := ioutil.ReadAll(r.Body)
   debug.EnsureNoError(err)
@@ -35,7 +35,7 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
 
   buf := bytes.NewBuffer(b)
 
-  fmt.Printf("Got message: %v\n", buf)
+  debug.DPrintf(0, "Got message: %v\n", buf)
 
   command, err := buf.ReadString('\n')
   debug.EnsureNoError(err)
@@ -53,8 +53,8 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
     xas, _ := dc.TransactionsSinceId(ns, id)
     server.SerializeTransactionSlice(ns, xas, resultBuf)
   default:
-    fmt.Printf("ERROR: Unrecognized command: %s", command)
+    fmt.Printf("ERROR: Unrecognized command: '%s'", command)
   }
 
-  fmt.Printf("End callback\n")
+  debug.DPrintf(0, "End callback\n")
 }
