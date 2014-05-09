@@ -93,6 +93,10 @@ func SerializeServerResult(ns string, success bool, xas []resolver.Transaction,
   }
   b.WriteByte('\n')
 
+  SerializeTransactionSlice(ns, xas, b)
+}
+
+func SerializeTransactionSlice(ns string, xas []resolver.Transaction, b *bytes.Buffer) {
   for _, x := range xas {
     SerializeTransaction(ns, x.(*LegoTransaction), b)
   }
