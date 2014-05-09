@@ -24,9 +24,15 @@ LegoBrick::LegoBrick(LegoUniverse *universe,
 
 LegoBrick::~LegoBrick()
 {
+}
+
+bool
+LegoBrick::Destroy()
+{
     LegoTransaction xa;
     xa.AddOp(LegoOp::MakeDeleteBrickOp(GetID()));
-    _xaMgr->Execute(xa);
+    bool success = _xaMgr->Execute(xa);
+    return success;
 }
 
 bool
