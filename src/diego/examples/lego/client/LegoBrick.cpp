@@ -2,8 +2,25 @@
 #include "LegoOps.h"
 #include "LegoTransaction.h"
 #include "LegoTransactionMgr.h"
+#include "LegoUniverse.h"
 
 #include <vector>
+
+LegoBrick::LegoBrick(LegoUniverse *universe,
+                     uint64_t id,
+                     const MfVec3i &position,
+                     const MfVec3i &size,
+                     Orientation orientation,
+                     const MfVec3f &color) :
+    _universe(universe),
+    _xaMgr(universe->GetTransactionMgr()),
+    _id(id),
+    _position(position),
+    _size(size),
+    _orientation(orientation),
+    _color(color)
+{
+}
 
 LegoBrick::~LegoBrick()
 {
