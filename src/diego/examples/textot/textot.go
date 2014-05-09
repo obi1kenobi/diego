@@ -3,8 +3,8 @@ package textot
 import "strconv"
 import "container/list"
 import "bytes"
-import "diego/resolver"
 import "diego/debug"
+import "diego/types"
 
 type idObject struct {
   id int64
@@ -25,7 +25,7 @@ type textState struct {
   str string
 }
 
-func makeState() resolver.State {
+func makeState() types.State {
   result := new(textState)
   return result
 }
@@ -37,7 +37,7 @@ func (ts textState) String() string {
 /*
  Apply - apply transaction if it's recent enough, otherwise, cancel.
  */
-func (ts *textState) Apply(action resolver.Transaction) (bool, resolver.Transaction) {
+func (ts *textState) Apply(action types.Transaction) (bool, types.Transaction) {
   debug.DPrintf(1, "Applying %v to %v.", action, ts)
   transform := action.(*textTransform)
   if ts.id != transform.id {
@@ -54,8 +54,8 @@ func (ts *textState) Apply(action resolver.Transaction) (bool, resolver.Transact
 /*
  Resolve - Update transform through the log, then return final transform
  */
-func (ts *textState) Resolve(ancestorState *resolver.State, log *list.List,
-                             current resolver.Transaction) (bool, resolver.Transaction) {
+func (ts *textState) Resolve(ancestorState *types.State, log *list.List,
+                             current types.Transaction) (bool, types.Transaction) {
   debug.DPrintf(1, "Resolving %v from %v to %v.", current, log.Front().Value, log.Back().Value)
   var err error
   transform := current.(*textTransform)
