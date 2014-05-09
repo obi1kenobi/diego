@@ -50,10 +50,15 @@ func MakeTestDataItem(op types.Transaction, success TransactionResult,
   return TestDataItem{op, success, localStatePredicate}
 }
 
-func randomizeTransactionId(op types.Transaction, rnd *rand.Rand) {
+func randomizeTransactionId(op types.Transaction, lowerBound int64, rnd *rand.Rand) {
   maxId := op.Id() - 1
   if maxId > 0 {
-    op.SetId(rnd.Int63n(maxId))
+    potential := rnd.Int63n(maxId)
+    if potential < lowerBound {
+      op.SetId(lowerBound)
+    } else {
+      op.SetId(potential)
+    }
   } else if maxId == 0 {
     op.SetId(0)
   }
@@ -148,4 +153,20 @@ func expectNoNewTransactions(t *testing.T, rs *resolver.Resolver, expid int64) b
     success = false
   }
   return success
+}
+
+/*
+MakeRequestTokenGenerator - quick and dirty way of generating unique request tokens
+for testing purposes. Thread-safe.
+*/
+func MakeRequestTokenGenerator(clientId int64) chan types.RequestToken {
+  generator := make(chan types.RequestToken)
+  go func () {
+    reqId := int64(0)
+    for {
+      generator <- types.RequestToken{ClientId: clientId, ReqId: reqId}
+      reqId++
+    }
+  }()
+  return generator
 }

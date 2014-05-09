@@ -8,6 +8,7 @@ import "diego/types"
 
 type idObject struct {
   id int64
+  token types.RequestToken
 }
 
 /* Id - returns Id */
@@ -17,7 +18,12 @@ func (obj *idObject) Id() int64 {
 
 /* SetId - returns SetId */
 func (obj *idObject) SetId(id int64) {
-  obj.id = id;
+  obj.id = id
+}
+
+/* GetToken - returns RequestToken */
+func (obj *idObject) GetToken() types.RequestToken {
+  return obj.token
 }
 
 type textState struct {
@@ -247,6 +253,7 @@ func (tt *textTransform) transformWith (ttBy *textTransform) (*textTransform, er
     ttNew.ops = append(ttNew.ops, next)
   }
   ttNew.id = ttBy.id+1
+  ttNew.token = tt.token
   ttNew.assertValid()
   return ttNew, nil
 }
