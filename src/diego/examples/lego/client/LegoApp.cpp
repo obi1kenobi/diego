@@ -1,6 +1,7 @@
 #include "LegoApp.h"
 #include "LegoMainWindow.h"
 #include "LegoNotices.h"
+#include "LegoTransactionMgr.h"
 #include "LegoUniverse.h"
 
 #include <cassert>
@@ -17,6 +18,8 @@ LegoApp::LegoApp(LegoMainWindow *mainWindow) :
 
     _CreateUniverse();
     _CreateScene();
+    _BuildBricks();
+
     _RegisterNoticeHandlers();
 }
 
@@ -392,6 +395,12 @@ LegoApp::_AddBrick(LegoBrick *brick,
 void
 LegoApp::_ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &)
 {
+    _BuildBricks();
+}
+
+void
+LegoApp::_BuildBricks()
+{
     const auto &bricks = _universe->GetBricks();
 
     _brickCoords->point.setNum(8 * bricks.size());
@@ -407,4 +416,10 @@ LegoApp::_ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &)
 
     _brickCoords->point.finishEditing();
     _brickIFS->coordIndex.finishEditing();
+}
+
+const std::vector<LegoTransaction> &
+LegoApp::GetTransactionLog()
+{
+    return _universe->GetTransactionMgr()->GetLog();
 }

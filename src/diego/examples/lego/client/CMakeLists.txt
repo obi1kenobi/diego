@@ -6,6 +6,7 @@ set(BIN_NAME LegoClient)
 
 set(LIBRARY_CPP_FILES
     BBox3d.cpp
+    Debug.cpp
     LegoApp.cpp
     LegoBrick.cpp
     LegoMainWindow.cpp

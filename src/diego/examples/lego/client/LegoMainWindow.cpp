@@ -53,6 +53,18 @@ LegoMainWindow::_Initialize()
     for (auto *viewerWidget : viewerWidgets) {
         _stackedViewWidget->addWidget(viewerWidget);
     }
+
+    // Display transaction log from server
+    const auto &xaLog = _app->GetTransactionLog();
+    for (const auto &xa : xaLog) {
+        const auto &ops = xa.GetOps();
+        for (const auto op : ops) {
+            std::ostringstream os;
+            op.Serialize(os);
+            _ui->logTextEdit->moveCursor(QTextCursor::End);
+            _ui->logTextEdit->insertPlainText(os.str().c_str());
+        }
+    }
 }
 
 void

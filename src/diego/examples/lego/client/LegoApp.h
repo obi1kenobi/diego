@@ -1,6 +1,7 @@
 #ifndef __LEGO_APP_H__
 #define __LEGO_APP_H__
 
+#include "LegoTransaction.h"
 #include "NoticeMgr.h"
 #include "Vec3d.h"
 
@@ -34,6 +35,8 @@ class LegoApp {
         return _viewerWidgets;
     }
 
+    const std::vector<LegoTransaction> & GetTransactionLog();
+
   private:
     struct _CallbackData {
         LegoApp *app;
@@ -43,7 +46,10 @@ class LegoApp {
     void _CreateUniverse();
 
     void _CreateScene();
+
     SoSeparator * _CreatePlatformBed();
+
+    void _BuildBricks();
 
     static void _BeginRenderSceneCB(void *userData, SoAction *action);
 
