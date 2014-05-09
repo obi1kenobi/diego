@@ -17,7 +17,7 @@ import "diego/types"
 
 const dataExtension = ".txdata"
 const indexExtension = ".txindex"
-const defaultPerm = 0666
+const defaultPerm = 0777
 
 const maxChunkLength = 1000
 const longLength = 8
