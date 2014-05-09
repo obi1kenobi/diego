@@ -2,6 +2,7 @@ package server
 
 import "testing"
 import "diego/tests"
+import "diego/types"
 import "diego/resolver"
 
 const trailingDistance = 50
@@ -105,8 +106,8 @@ func checkBrick(t *testing.T,
   return true
 }
 
-func legoCreatePredicate(ops []interface{}) func(*testing.T, resolver.State) bool {
-  return func(t *testing.T, s resolver.State) bool {
+func legoCreatePredicate(ops []interface{}) func(*testing.T, types.State) bool {
+  return func(t *testing.T, s types.State) bool {
     op := ops[0].(*LegoOpCreateBrick)
     universe := s.(*LegoUniverse)
 
@@ -125,7 +126,7 @@ func legoCreatePredicate(ops []interface{}) func(*testing.T, resolver.State) boo
   }
 }
 
-func stateEquals(a, b resolver.State) bool {
+func stateEquals(a, b types.State) bool {
   return true
 }
 

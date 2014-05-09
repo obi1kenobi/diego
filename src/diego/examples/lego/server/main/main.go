@@ -14,7 +14,7 @@ const address = ":8080"
 
 func main() {
   fmt.Printf("Creating diego...\n")
-  dc = core.CreateDiegoCore(500, server.MakeState)
+  dc = core.CreateDiegoCore(500, server.MakeState, "")
   fmt.Printf("Done.\n")
 
   fmt.Printf("Launching httpd...\n")
