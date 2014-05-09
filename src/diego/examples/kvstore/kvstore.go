@@ -8,11 +8,13 @@ import "diego/types"
 type kvStore struct {
   data map[string]string
   id int64
+  token types.RequestToken
 }
 
 // last-writer-wins set op
 type lwwSetOp struct {
   id int64
+  token types.RequestToken
   key string
   value string
 }
@@ -25,10 +27,15 @@ func (op *lwwSetOp) SetId(id int64) {
   op.id = id
 }
 
+func (op *lwwSetOp) GetToken() types.RequestToken {
+  return op.token
+}
+
 // op that is rejected if not against latest state
 // (pessimistically assumes that any unseen transactions taint the state)
 type pessimisticSetOp struct {
   id int64
+  token types.RequestToken
   key string
   value string
 }
@@ -41,10 +48,15 @@ func (op *pessimisticSetOp) SetId(id int64) {
   op.id = id
 }
 
+func (op *pessimisticSetOp) GetToken() types.RequestToken {
+  return op.token
+}
+
 // op that is rejected if there were any changes to the key since the last-seen state
 // (optimistically assumes that there were no changes, fails if this was wrong)
 type testAndSetOp struct {
   id int64
+  token types.RequestToken
   key string
   value string
 }
@@ -57,9 +69,14 @@ func (op *testAndSetOp) SetId(id int64) {
   op.id = id
 }
 
+func (op *testAndSetOp) GetToken() types.RequestToken {
+  return op.token
+}
+
 // append-to-key op
 type appendOp struct {
   id int64
+  token types.RequestToken
   key string
   value string
 }
@@ -72,11 +89,16 @@ func (op *appendOp) SetId(id int64) {
   op.id = id
 }
 
+func (op *appendOp) GetToken() types.RequestToken {
+  return op.token
+}
+
 // contrived example of an op that needs the log to get resolved
 // opnum is incremented for each flipflopAddOp executed (on any key)
 // if opnum is even, the value is added, otherwise, it is subtracted from the key
 type flipflopAddOp struct {
   id int64
+  token types.RequestToken
   key string
   opnum int
   value int
@@ -88,6 +110,10 @@ func (op *flipflopAddOp) Id() int64 {
 
 func (op *flipflopAddOp) SetId(id int64) {
   op.id = id
+}
+
+func (op *flipflopAddOp) GetToken() types.RequestToken {
+  return op.token
 }
 
 func (kv *kvStore) Equals(kv2 *kvStore) bool {
@@ -199,6 +225,7 @@ func (op *flipflopAddOp) resolveFlipFlop(id int64, log *list.List) (bool, types.
   newT.key = op.key
   newT.value = op.value
   newT.id = id
+  newT.token = op.token
 
   e := log.Front()
   for e != nil && e.Value.(types.Transaction).Id() < op.id {
@@ -225,6 +252,7 @@ func (op *testAndSetOp) resolveTestAndSet(id int64, log *list.List) (bool, types
   newT.key = op.key
   newT.value = op.value
   newT.id = id
+  newT.token = op.token
 
   e := log.Front()
   for e != nil && e.Value.(types.Transaction).Id() < op.id {
