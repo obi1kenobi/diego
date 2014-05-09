@@ -48,8 +48,6 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
     ns, xa := server.DeserializeTransaction(buf)
     success, xas := dc.SubmitTransaction(ns, xa)
     server.SerializeServerResult(ns, success, xas, resultBuf)
-    _, err = resultBuf.WriteTo(w)
-    debug.EnsureNoError(err)
   case "TransactionsSince":
     ns, id := server.DeserializeTransactionsSince(buf)
     xas, _ := dc.TransactionsSinceId(ns, id)
@@ -59,6 +57,9 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
   default:
     fmt.Printf("ERROR: Unrecognized command: '%s'", command)
   }
+
+  _, err = resultBuf.WriteTo(w)
+  debug.EnsureNoError(err)
 
   debug.DPrintf(0, "End callback\n")
 }
