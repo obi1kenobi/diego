@@ -17,7 +17,8 @@ import "diego/types"
 
 const dataExtension = ".txdata"
 const indexExtension = ".txindex"
-const defaultPerm = 0777
+const filePerm = 0666
+const directoryPerm = 0777
 
 const maxChunkLength = 1000
 const longLength = 8
@@ -69,7 +70,7 @@ func CreateTransactionLogger(basePath string) *TransactionLogger {
   tl := new(TransactionLogger)
   tl.basePath = basePath
 
-  err := os.MkdirAll(basePath, defaultPerm)
+  err := os.MkdirAll(basePath, directoryPerm)
   debug.EnsureNoError(err)
 
   tl.clearedIndex = -1
@@ -310,12 +311,12 @@ func (tl *TransactionLogger) createNextFiles() {
 
   tl.newestIndexFile, err = os.OpenFile(indexPath,
                                         os.O_RDWR | os.O_CREATE,
-                                        defaultPerm)
+                                        filePerm)
   debug.EnsureNoError(err)
 
   tl.newestDataFile, err = os.OpenFile(dataPath,
                                        os.O_RDWR | os.O_CREATE,
-                                       defaultPerm)
+                                       filePerm)
   debug.EnsureNoError(err)
 }
 
@@ -395,7 +396,7 @@ func tryLoadExistingWriter(tl *TransactionLogger) {
   tl.newestFileIndex = maxFileIndex
   tl.newestIndexFile, err = os.OpenFile(tl.makePath(maxFileIndex, indexExtension),
                                         os.O_RDWR | os.O_APPEND,
-                                        defaultPerm)
+                                        filePerm)
   debug.EnsureNoError(err)
 
   fi, err := tl.newestIndexFile.Stat()
@@ -424,7 +425,7 @@ func tryLoadExistingWriter(tl *TransactionLogger) {
   // prep the newest index's corresponding data file
   tl.newestDataFile, err = os.OpenFile(tl.makePath(maxFileIndex, dataExtension),
                                        os.O_RDWR | os.O_APPEND,
-                                       defaultPerm)
+                                       filePerm)
   fi, err = tl.newestDataFile.Stat()
   debug.EnsureNoError(err)
 
