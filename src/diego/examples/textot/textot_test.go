@@ -9,7 +9,7 @@ import "diego/types"
 
 const trailingDistance = 50
 
-func setup()(*resolver.Resolver, *textState, chan types.RequestToken) {
+func setup()(*resolver.Resolver, *textState, func() types.RequestToken) {
   return makeResolver(), makeState().(*textState), tests.MakeRequestTokenGenerator(int64(0))
 }
 
@@ -70,9 +70,9 @@ func makeTransaction(id int64, token types.RequestToken, str string) *textTransf
 func TestAtMostOnce(t *testing.T) {
   rs, s, nt := setup()
 
-  token1 := <-nt
-  token2 := <-nt
-  token3 := <-nt
+  token1 := nt()
+  token2 := nt()
+  token3 := nt()
 
   testData := []tests.TestDataItem {
     tests.MakeTestDataItem(makeTransaction(0, token1, "'aaa'"), tests.Success, textPredicate(0, -1,"aaa")),
@@ -89,11 +89,11 @@ func TestSkipOp(t *testing.T) {
   rs, s, nt := setup()
 
   testData := []tests.TestDataItem {
-    tests.MakeTestDataItem(makeTransaction(0, <-nt, "'aaa'"), tests.Success, textPredicate(0, -1,"aaa")),
-    tests.MakeTestDataItem(makeTransaction(1, <-nt, "1"), tests.Success, textPredicate(0, -1,"aaa")),
-    tests.MakeTestDataItem(makeTransaction(2, <-nt, "1, 1"), tests.Success, textPredicate(0, -1, "aaa")),
-    tests.MakeTestDataItem(makeTransaction(1, <-nt, "2"), tests.Success, textPredicate(0, -1, "aaa")),
-    tests.MakeTestDataItem(makeTransaction(4, <-nt, "1"), tests.Success, textPredicate(0, -1, "aaa")),
+    tests.MakeTestDataItem(makeTransaction(0, nt(), "'aaa'"), tests.Success, textPredicate(0, -1,"aaa")),
+    tests.MakeTestDataItem(makeTransaction(1, nt(), "1"), tests.Success, textPredicate(0, -1,"aaa")),
+    tests.MakeTestDataItem(makeTransaction(2, nt(), "1, 1"), tests.Success, textPredicate(0, -1, "aaa")),
+    tests.MakeTestDataItem(makeTransaction(1, nt(), "2"), tests.Success, textPredicate(0, -1, "aaa")),
+    tests.MakeTestDataItem(makeTransaction(4, nt(), "1"), tests.Success, textPredicate(0, -1, "aaa")),
   }
 
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
@@ -103,11 +103,11 @@ func TestInsertOp(t *testing.T) {
   rs, s, nt := setup()
 
   testData := []tests.TestDataItem {
-    tests.MakeTestDataItem(makeTransaction(0, <-nt, "'aaa'"), tests.Success, textPredicate(0, -1,"aaa")),
-    tests.MakeTestDataItem(makeTransaction(1, <-nt, "'b'"), tests.Success, textPredicate(0, -1, "baaa")),
-    tests.MakeTestDataItem(makeTransaction(2, <-nt, "2, 'b'"), tests.Success, textPredicate(0, -1, "babaa")),
-    tests.MakeTestDataItem(makeTransaction(1, <-nt, "1, 'cc'"), tests.Success, textPredicate(0, -1, "babccaa")),
-    tests.MakeTestDataItem(makeTransaction(4, <-nt, "1, 'd', 3, 'dd'"), tests.Success, textPredicate(0, -1, "bdabcddcaa")),
+    tests.MakeTestDataItem(makeTransaction(0, nt(), "'aaa'"), tests.Success, textPredicate(0, -1,"aaa")),
+    tests.MakeTestDataItem(makeTransaction(1, nt(), "'b'"), tests.Success, textPredicate(0, -1, "baaa")),
+    tests.MakeTestDataItem(makeTransaction(2, nt(), "2, 'b'"), tests.Success, textPredicate(0, -1, "babaa")),
+    tests.MakeTestDataItem(makeTransaction(1, nt(), "1, 'cc'"), tests.Success, textPredicate(0, -1, "babccaa")),
+    tests.MakeTestDataItem(makeTransaction(4, nt(), "1, 'd', 3, 'dd'"), tests.Success, textPredicate(0, -1, "bdabcddcaa")),
   }
 
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
@@ -117,11 +117,11 @@ func TestDeleteOp(t *testing.T) {
   rs, s, nt := setup()
 
   testData := []tests.TestDataItem {
-    tests.MakeTestDataItem(makeTransaction(0, <-nt, "'aaabbbcccddd'"), tests.Success, textPredicate(0, -1,"aaabbbcccddd")),
-    tests.MakeTestDataItem(makeTransaction(1, <-nt, "{1}"), tests.Success, textPredicate(0, -1, "aabbbcccddd")),
-    tests.MakeTestDataItem(makeTransaction(2, <-nt, "2, {2}"), tests.Success, textPredicate(0, -1, "aabcccddd")),
-    tests.MakeTestDataItem(makeTransaction(1, <-nt, "1, {1}"), tests.Success, textPredicate(0, -1, "abcccddd")),
-    tests.MakeTestDataItem(makeTransaction(4, <-nt, "1, {2}, 3, {1}"), tests.Success, textPredicate(0, -1, "accdd")),
+    tests.MakeTestDataItem(makeTransaction(0, nt(), "'aaabbbcccddd'"), tests.Success, textPredicate(0, -1,"aaabbbcccddd")),
+    tests.MakeTestDataItem(makeTransaction(1, nt(), "{1}"), tests.Success, textPredicate(0, -1, "aabbbcccddd")),
+    tests.MakeTestDataItem(makeTransaction(2, nt(), "2, {2}"), tests.Success, textPredicate(0, -1, "aabcccddd")),
+    tests.MakeTestDataItem(makeTransaction(1, nt(), "1, {1}"), tests.Success, textPredicate(0, -1, "abcccddd")),
+    tests.MakeTestDataItem(makeTransaction(4, nt(), "1, {2}, 3, {1}"), tests.Success, textPredicate(0, -1, "accdd")),
   }
 
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
@@ -131,11 +131,11 @@ func TestMixedResolveOp(t *testing.T) {
   rs, s, nt := setup()
 
   testData := []tests.TestDataItem {
-    tests.MakeTestDataItem(makeTransaction(0, <-nt, "'aaabbb'"), tests.Success, textPredicate(0, -1,"aaabbb")),
-    tests.MakeTestDataItem(makeTransaction(1, <-nt, "1, 'cc', 1, {1}"), tests.Success, textPredicate(0, -1, "accabbb")),
-    tests.MakeTestDataItem(makeTransaction(1, <-nt, "5, 'ddd'"), tests.Success, textPredicate(0, -1, "accabbdddb")),
-    tests.MakeTestDataItem(makeTransaction(1, <-nt, "1, {5}"), tests.Success, textPredicate(0, -1, "accddd")),
-    tests.MakeTestDataItem(makeTransaction(3, <-nt, "3, 'ee', 1, 'f'"), tests.Success, textPredicate(0, -1, "acceefddd")),
+    tests.MakeTestDataItem(makeTransaction(0, nt(), "'aaabbb'"), tests.Success, textPredicate(0, -1,"aaabbb")),
+    tests.MakeTestDataItem(makeTransaction(1, nt(), "1, 'cc', 1, {1}"), tests.Success, textPredicate(0, -1, "accabbb")),
+    tests.MakeTestDataItem(makeTransaction(1, nt(), "5, 'ddd'"), tests.Success, textPredicate(0, -1, "accabbdddb")),
+    tests.MakeTestDataItem(makeTransaction(1, nt(), "1, {5}"), tests.Success, textPredicate(0, -1, "accddd")),
+    tests.MakeTestDataItem(makeTransaction(3, nt(), "3, 'ee', 1, 'f'"), tests.Success, textPredicate(0, -1, "acceefddd")),
   }
 
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)

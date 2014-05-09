@@ -157,16 +157,12 @@ func expectNoNewTransactions(t *testing.T, rs *resolver.Resolver, expid int64) b
 
 /*
 MakeRequestTokenGenerator - quick and dirty way of generating unique request tokens
-for testing purposes. Thread-safe.
+for testing purposes. Not thread safe.
 */
-func MakeRequestTokenGenerator(clientId int64) chan types.RequestToken {
-  generator := make(chan types.RequestToken)
-  go func () {
-    reqId := int64(0)
-    for {
-      generator <- types.RequestToken{ClientId: clientId, ReqId: reqId}
-      reqId++
-    }
-  }()
-  return generator
+func MakeRequestTokenGenerator(clientId int64) func()types.RequestToken {
+  reqId := int64(0)
+  return func() types.RequestToken {
+    reqId++
+    return types.RequestToken{ClientId: clientId, ReqId: reqId}
+  }
 }

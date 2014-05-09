@@ -10,7 +10,7 @@ import "diego/types"
 const trailingDistance = 50
 const randomKeyspaceSize = 25
 
-func setup()(*resolver.Resolver, *kvStore, chan types.RequestToken) {
+func setup()(*resolver.Resolver, *kvStore, func() types.RequestToken) {
   return makeResolver(), makeState().(*kvStore), tests.MakeRequestTokenGenerator(0)
 }
 
@@ -68,7 +68,7 @@ func makeTestData(data []tests.TestDataItem, rnd *rand.Rand) {
                                                                              generateRandomAppend,
                                                                              generateRandomTestAndSet }
   for i := 0; i < len(data); i++ {
-    data[i] = generateRandomData(fns, rnd, <-nt)
+    data[i] = generateRandomData(fns, rnd, nt())
   }
 }
 
