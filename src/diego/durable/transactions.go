@@ -13,7 +13,7 @@ import "encoding/binary"
 import "encoding/gob"
 
 import "diego/debug"
-import "diego/resolver"
+import "diego/types"
 
 const dataExtension = ".txdata"
 const indexExtension = ".txindex"
@@ -58,7 +58,7 @@ type TransactionLogger struct {
 // name needs to be short to keep gobs short
 // gtr = gobbed transaction
 type gtr struct {
-  T resolver.Transaction
+  T types.Transaction
 }
 
 /*
@@ -89,7 +89,7 @@ func CreateTransactionLogger(basePath string) *TransactionLogger {
 Append - durably appends the specified transaction to the log
   only returns after the log has been fsynced to disk
 */
-func (tl *TransactionLogger) Append(t resolver.Transaction) {
+func (tl *TransactionLogger) Append(t types.Transaction) {
   tl.mu.Lock()
   defer tl.mu.Unlock()
 
@@ -162,7 +162,7 @@ ReadAll - reads all transactions in the entire log, in order,
 
   VERY EXPENSIVE FUNCTION -- use only when recovering from faults
 */
-func (tl *TransactionLogger) ReadAll(transactionProcessor func(resolver.Transaction)) {
+func (tl *TransactionLogger) ReadAll(transactionProcessor func(types.Transaction)) {
   tl.mu.Lock()
   defer tl.mu.Unlock()
 
@@ -177,7 +177,7 @@ func (tl *TransactionLogger) ReadAll(transactionProcessor func(resolver.Transact
 }
 
 // callers need to hold tl.mu before calling this method
-func (tl *TransactionLogger) readAllFileIndex(index int64, transactionProcessor func(resolver.Transaction)) {
+func (tl *TransactionLogger) readAllFileIndex(index int64, transactionProcessor func(types.Transaction)) {
   // we're guaranteed that indexFiles and dataFiles have entries on the same keys
   // it's enough to check just one
   _, ok := tl.indexFiles[index]
