@@ -69,6 +69,10 @@ func (dc *DiegoCore) loadDurableNamespaces() {
 }
 
 func (dc *DiegoCore) makeResolverDurablePath(ns string) string {
+  if dc.durablePath == "" {
+    return ""
+  }
+
   buf := bytes.NewBufferString(ns)
   dirname := base64.URLEncoding.EncodeToString(buf.Bytes())
   return path.Join(dc.durablePath, dirname)
