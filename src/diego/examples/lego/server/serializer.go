@@ -13,9 +13,9 @@ type legoSerializable interface {
 
 func DeserializeTransactionsSince(buf *bytes.Buffer) (string, int64) {
   ns, err := buf.ReadString(legoDelim)
-  ns = ns[:len(ns)-1]
   debug.EnsureNoError(err)
 
+  ns = ns[:len(ns)-1]
   id := deserializeInt64(buf)
   return ns, id
 }
