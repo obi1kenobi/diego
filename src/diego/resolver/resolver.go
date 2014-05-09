@@ -3,6 +3,8 @@ package resolver
 import "sync"
 import "container/list"
 import "diego/debug"
+import "diego/durable"
+import "diego/types"
 
 /*
 The default maximum distance between the current and the trailing state.
@@ -14,17 +16,21 @@ Resolver - The main resolver object that this framework provides.
 */
 type Resolver struct {
   mu sync.RWMutex
-  currentState State
-  trailingState State
+  currentState types.State
+  trailingState types.State
   log *list.List // in order of oldest transaction (Front) to newest transaction (Back)
   transactionIdLookup map[int64]*list.Element
   trailingDistance int
+  durableLogger *durable.TransactionLogger
+  closed bool
 }
 
 /*
 CreateResolver - Factory method to make a resolver based on a State-generating function.
+  If durablePath is "", no durable copy of transactions will be recorded. Otherwise, the path must
+  point to a directory which is either empty or the location of old transaction records.
 */
-func CreateResolver(makeState func()State, trailingDistance int) *Resolver {
+func CreateResolver(makeState func()types.State, trailingDistance int, durablePath string) *Resolver {
   rs := new(Resolver)
   rs.currentState = makeState()
   rs.trailingState = makeState()
@@ -33,17 +39,28 @@ func CreateResolver(makeState func()State, trailingDistance int) *Resolver {
   rs.trailingDistance = trailingDistance
   rs.log = new(list.List)
   rs.transactionIdLookup = make(map[int64]*list.Element)
+
+  if durablePath != "" {
+    rs.durableLogger = durable.CreateTransactionLogger(durablePath)
+
+    // apply any transaction that exist in the log
+    transactionProcessor := func(t types.Transaction) {
+      rs.submitTransactionLockless(t)
+    }
+    rs.durableLogger.ReadAll(transactionProcessor)
+  }
+
   return rs
 }
 
-func (rs *Resolver) appendTransaction(t Transaction) {
+func (rs *Resolver) appendTransaction(t types.Transaction) {
   debug.Assert(rs.log.Len() <= rs.trailingDistance,
          "Log length %s > trailing distance %s",
          debug.Stringify(rs.log.Len()), debug.Stringify(rs.trailingDistance))
 
   if rs.log.Len() == rs.trailingDistance {
     sid := rs.trailingState.Id()
-    oldT := rs.log.Front().Value.(Transaction)
+    oldT := rs.log.Front().Value.(types.Transaction)
     oldtrid := oldT.Id()
 
     debug.Assert(sid == oldtrid,
@@ -66,18 +83,37 @@ func (rs *Resolver) appendTransaction(t Transaction) {
   rs.transactionIdLookup[t.Id()] = rs.log.Back()
 }
 
-func assertRecentTransaction(s *State, t Transaction) {
+func assertRecentTransaction(s *types.State, t types.Transaction) {
   debug.Assert((*s).Id() == t.Id(),
                "Transaction %s not recent relative to state %s",
                debug.Stringify(t), debug.Stringify(s))
 }
 
-func (rs *Resolver) transactionSuccess(t Transaction) (bool, Transaction) {
+func (rs *Resolver) transactionSuccess(t types.Transaction) (bool, types.Transaction) {
   assertRecentTransaction(&rs.currentState, t)
 
   rs.currentState.SetId(rs.currentState.Id() + 1)
   rs.appendTransaction(t)
   return true, t
+}
+
+/*
+Close - close the resolver and do cleanup
+  calling any function except Close on a closed resolver will return nil/error/false values,
+  as appropriate.
+*/
+func (rs *Resolver) Close() {
+  rs.mu.Lock()
+  defer rs.mu.Unlock()
+
+  if rs.closed {
+    return
+  }
+
+  rs.closed = true
+  if rs.durableLogger != nil {
+    rs.durableLogger.Close()
+  }
 }
 
 /*
@@ -89,9 +125,13 @@ TransactionsSinceId - Returns the current state id and a slice of all transactio
   If the id is not smaller than the id of the trailing state, but is still "old", then this
     function call may be expensive.
 */
-func (rs *Resolver) TransactionsSinceId(id int64) (int64, []Transaction) {
+func (rs *Resolver) TransactionsSinceId(id int64) (int64, []types.Transaction) {
   rs.mu.RLock()
   defer rs.mu.RUnlock()
+
+  if rs.closed {
+    return 0, nil
+  }
 
   sid := rs.currentState.Id()
   tcount := sid - id
@@ -99,12 +139,12 @@ func (rs *Resolver) TransactionsSinceId(id int64) (int64, []Transaction) {
     return sid, nil
   }
 
-  transactions := make([]Transaction, tcount)
+  transactions := make([]types.Transaction, tcount)
   elem := rs.transactionIdLookup[id]
-  transactions[0] = elem.Value.(Transaction)
+  transactions[0] = elem.Value.(types.Transaction)
   for i := id + 1; i < sid; i++ {
     elem = elem.Next()
-    transactions[i - id] = elem.Value.(Transaction)
+    transactions[i - id] = elem.Value.(types.Transaction)
   }
   return sid, transactions
 }
@@ -116,6 +156,10 @@ func (rs *Resolver) CurrentStateId() int64 {
   rs.mu.RLock()
   defer rs.mu.RUnlock()
 
+  if rs.closed {
+    return 0
+  }
+
   return rs.currentState.Id()
 }
 
@@ -126,22 +170,24 @@ CurrentState - Calls the specified callback with the current state as its argume
 
   The callback *MUST NOT* modify any field in the State!
 */
-func (rs *Resolver) CurrentState(callback func(State)) {
+func (rs *Resolver) CurrentState(callback func(types.State)) {
   rs.mu.RLock()
   defer rs.mu.RUnlock()
+
+  if rs.closed {
+    return
+  }
 
   callback(rs.currentState)
 }
 
 /*
-SubmitTransaction - Ask the resolver to apply a transaction.
-  Returns success/failure, and the transaction as it looked when committed
-  (committed transaction may be different than transaction passed in)
-*/
-func (rs *Resolver) SubmitTransaction(t Transaction) (bool, Transaction) {
-  rs.mu.Lock()
-  defer rs.mu.Unlock()
+submitTransactionLockless - lockless version of SubmitTransaction.
+  Called by SubmitTransaction after acquiring the write lock on the Resolver.
 
+  Write lock on the Resolver must be held when calling this method.
+*/
+func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.Transaction) {
   trid := t.Id()
   sid := rs.currentState.Id()
   tsid := rs.trailingState.Id()
@@ -211,4 +257,20 @@ func (rs *Resolver) SubmitTransaction(t Transaction) (bool, Transaction) {
                "Unreachable case in SubmitTransaction: trid=%s tsid=%s sid=%s",
                debug.Stringify(trid), debug.Stringify(tsid), debug.Stringify(sid))
   return false, nil
+}
+
+/*
+SubmitTransaction - Ask the resolver to apply a transaction.
+  Returns success/failure, and the transaction as it looked when committed
+  (committed transaction may be different than transaction passed in)
+*/
+func (rs *Resolver) SubmitTransaction(t types.Transaction) (bool, types.Transaction) {
+  rs.mu.Lock()
+  defer rs.mu.Unlock()
+
+  if rs.closed {
+    return false, nil
+  }
+
+  return rs.submitTransactionLockless(t)
 }

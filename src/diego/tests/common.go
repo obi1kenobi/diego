@@ -4,6 +4,7 @@ import "testing"
 import "math/rand"
 import "diego/resolver"
 import "diego/debug"
+import "diego/types"
 
 /*
 TransactionResult - do we expect the transaction to succeed/fail, or we simply don't care to check
@@ -32,24 +33,24 @@ TestDataItem -
   localStatePredicate = function that determines whether the local state is correct after the transaction is applied
 */
 type TestDataItem struct {
-  op resolver.Transaction
+  op types.Transaction
   submitSuccess TransactionResult
-  localStatePredicate func(*testing.T, resolver.State)bool
+  localStatePredicate func(*testing.T, types.State)bool
 }
 
 /*
 MakeTestDataItem - factory method for TestDataItem. Makes the predicate a no-op if one is not specified.
 */
-func MakeTestDataItem(op resolver.Transaction, success TransactionResult,
-                      localStatePredicate func(*testing.T, resolver.State)bool)TestDataItem {
+func MakeTestDataItem(op types.Transaction, success TransactionResult,
+                      localStatePredicate func(*testing.T, types.State)bool)TestDataItem {
 
   if localStatePredicate == nil {
-    localStatePredicate = func(*testing.T, resolver.State)bool {return true};
+    localStatePredicate = func(*testing.T, types.State)bool {return true};
   }
   return TestDataItem{op, success, localStatePredicate}
 }
 
-func randomizeTransactionId(op resolver.Transaction, rnd *rand.Rand) {
+func randomizeTransactionId(op types.Transaction, rnd *rand.Rand) {
   maxId := op.Id() - 1
   if maxId > 0 {
     op.SetId(rnd.Int63n(maxId))
@@ -58,10 +59,10 @@ func randomizeTransactionId(op resolver.Transaction, rnd *rand.Rand) {
   }
 }
 
-func expectConvergedState(t *testing.T, rs *resolver.Resolver, s resolver.State,
-                          equals func(resolver.State, resolver.State)bool) bool {
+func expectConvergedState(t *testing.T, rs *resolver.Resolver, s types.State,
+                          equals func(types.State, types.State)bool) bool {
   success := true
-  callback := func(state resolver.State) {
+  callback := func(state types.State) {
     if !equals(s, state) {
       t.Fatalf("State mismatch: local=%s; remote=%s", debug.Stringify(s), debug.Stringify(state))
       success = false
@@ -72,7 +73,7 @@ func expectConvergedState(t *testing.T, rs *resolver.Resolver, s resolver.State,
 }
 
 func expectSubmitSuccess(t *testing.T, rs *resolver.Resolver,
-                         op resolver.Transaction, s resolver.State) bool {
+                         op types.Transaction, s types.State) bool {
   success := true
   ok, newT := rs.SubmitTransaction(op)
   if !ok {
@@ -89,7 +90,7 @@ func expectSubmitSuccess(t *testing.T, rs *resolver.Resolver,
 }
 
 func expectSubmitFailure(t *testing.T, rs *resolver.Resolver,
-                         op resolver.Transaction) bool {
+                         op types.Transaction) bool {
   ok, _ := rs.SubmitTransaction(op)
   if ok {
     t.Errorf("Transaction %s applied on server when it shouldn't have", debug.Stringify(op))
@@ -99,7 +100,7 @@ func expectSubmitFailure(t *testing.T, rs *resolver.Resolver,
 }
 
 func handleSubmit(t *testing.T, rs *resolver.Resolver,
-                  op resolver.Transaction, s resolver.State) bool {
+                  op types.Transaction, s types.State) bool {
   ok, newT := rs.SubmitTransaction(op)
   if ok {
     ok, _ = s.Apply(newT)
@@ -113,7 +114,7 @@ func handleSubmit(t *testing.T, rs *resolver.Resolver,
 }
 
 func expectSubmitResult(t *testing.T, rs *resolver.Resolver,
-                        op resolver.Transaction, s resolver.State,
+                        op types.Transaction, s types.State,
                         result TransactionResult) bool {
   switch result {
   case Success:
