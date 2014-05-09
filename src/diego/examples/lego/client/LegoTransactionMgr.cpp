@@ -150,14 +150,26 @@ LegoTransactionMgr::_Execute(const std::vector<LegoTransaction> &xas)
                                         op.GetOrientation(),
                                         op.GetColor());
             } break;
-            case LegoOp::MODIFY_POSITION: break; {
+            case LegoOp::MODIFY_POSITION: {
                 LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
                 brick->_SetPosition(op.GetPosition());
             } break;
-            case LegoOp::MODIFY_SIZE: break;
-            case LegoOp::MODIFY_ORIENTATION: break;
-            case LegoOp::MODIFY_COLOR: break;
-            case LegoOp::DELETE_BRICK: break;
+            case LegoOp::MODIFY_SIZE: {
+                LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
+                brick->_SetSize(op.GetSize());
+            } break;
+            case LegoOp::MODIFY_ORIENTATION: {
+                LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
+                brick->_SetOrientation(op.GetOrientation());
+            } break;
+            case LegoOp::MODIFY_COLOR: {
+                LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
+                brick->_SetColor(op.GetColor());
+            } break;
+            case LegoOp::DELETE_BRICK: {
+                LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
+                brick->_Destroy();
+            } break;
             }
         }
         ++_xaIds;
@@ -178,7 +190,7 @@ LegoTransactionMgr::CatchupWithServer()
 {
     std::ostringstream os;
     os << "TransactionsSince\n";
-    os << _xaIds << "\n";
+    os << _universe->GetID() << " " << _xaIds << "\n";
 
     std::string response = _SendText(os.str());
     std::vector<LegoTransaction> serverLog;

@@ -3,7 +3,6 @@ package server
 import "container/list"
 import "diego/debug"
 import "diego/types"
-import "fmt"
 import "reflect"
 
 func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transaction) {
@@ -24,16 +23,16 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
       debug.DPrintf(1, "Inserted brick id %d at position = %v",
                     brickId, typedOp.position.data)
     case *LegoOpDeleteBrick:
-      fmt.Printf("Deleting brick with id %d\n", typedOp.id)
+      debug.DPrintf(1, "Deleting brick with id %d\n", typedOp.id)
     case *LegoOpModifyBrickColor:
-      fmt.Printf("Modify brick id %d with color %f %f %f\n", typedOp.id,
-                 typedOp.color.data[0], typedOp.color.data[1], typedOp.color.data[2])
+      debug.DPrintf(1, "Modify brick id %d with color %f %f %f\n", typedOp.id,
+                    typedOp.color.data[0], typedOp.color.data[1], typedOp.color.data[2])
     case *LegoOpModifyBrickOrientation:
-      fmt.Printf("Modify brick id %d with orientation %s\n", typedOp.id,
-                 typedOp.orientation)
+      debug.DPrintf(1, "Modify brick id %d with orientation %s\n", typedOp.id,
+                    typedOp.orientation)
     case *LegoOpModifyBrickSize:
-      fmt.Printf("Modify brick id %d with size %d %d\n", typedOp.id,
-                 typedOp.size.data[0], typedOp.size.data[1])
+      debug.DPrintf(1, "Modify brick id %d with size %d %d\n", typedOp.id,
+                    typedOp.size.data[0], typedOp.size.data[1])
     default:
       debug.Assert(false, "Found invalid op: %v", op)
     }
