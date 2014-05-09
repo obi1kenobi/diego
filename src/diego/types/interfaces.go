@@ -1,4 +1,4 @@
-package resolver
+package types
 
 import "container/list"
 

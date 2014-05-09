@@ -2,8 +2,8 @@ package kvstore
 
 import "strconv"
 import "container/list"
-import "diego/resolver"
 import "diego/debug"
+import "diego/types"
 
 type kvStore struct {
   data map[string]string
@@ -122,13 +122,13 @@ func (kv *kvStore) Id() int64 {
   return kv.id
 }
 
-func (kv *kvStore) applyLwwSet(x *lwwSetOp) (bool, resolver.Transaction) {
+func (kv *kvStore) applyLwwSet(x *lwwSetOp) (bool, types.Transaction) {
   kv.data[x.key] = x.value
   x.id = kv.id
   return true, x
 }
 
-func (kv *kvStore) applyPessimisticSet(x *pessimisticSetOp) (bool, resolver.Transaction) {
+func (kv *kvStore) applyPessimisticSet(x *pessimisticSetOp) (bool, types.Transaction) {
   if kv.id == x.id {
     kv.data[x.key] = x.value
     return true, x
@@ -137,7 +137,7 @@ func (kv *kvStore) applyPessimisticSet(x *pessimisticSetOp) (bool, resolver.Tran
   return false, nil
 }
 
-func (kv *kvStore) applyTestAndSet(x *testAndSetOp) (bool, resolver.Transaction) {
+func (kv *kvStore) applyTestAndSet(x *testAndSetOp) (bool, types.Transaction) {
   if kv.id == x.id {
     kv.data[x.key] = x.value
     return true, x
@@ -146,13 +146,13 @@ func (kv *kvStore) applyTestAndSet(x *testAndSetOp) (bool, resolver.Transaction)
   return false, nil
 }
 
-func (kv *kvStore) applyAppend(x *appendOp) (bool, resolver.Transaction) {
+func (kv *kvStore) applyAppend(x *appendOp) (bool, types.Transaction) {
   kv.data[x.key] = kv.data[x.key] + x.value
   x.id = kv.id
   return true, x
 }
 
-func (kv *kvStore) applyFlipflopAdd(x *flipflopAddOp) (bool, resolver.Transaction) {
+func (kv *kvStore) applyFlipflopAdd(x *flipflopAddOp) (bool, types.Transaction) {
   if kv.id != x.id {
     return false, nil
   }
@@ -175,7 +175,7 @@ func (kv *kvStore) applyFlipflopAdd(x *flipflopAddOp) (bool, resolver.Transactio
   return true, x
 }
 
-func (kv *kvStore) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
+func (kv *kvStore) Apply(t types.Transaction) (bool, types.Transaction) {
   switch x := t.(type) {
   case *lwwSetOp:
     return kv.applyLwwSet(x)
@@ -193,7 +193,7 @@ func (kv *kvStore) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
   }
 }
 
-func (op *flipflopAddOp) resolveFlipFlop(id int64, log *list.List) (bool, resolver.Transaction) {
+func (op *flipflopAddOp) resolveFlipFlop(id int64, log *list.List) (bool, types.Transaction) {
   opnum := op.opnum
   newT := new(flipflopAddOp)
   newT.key = op.key
@@ -201,7 +201,7 @@ func (op *flipflopAddOp) resolveFlipFlop(id int64, log *list.List) (bool, resolv
   newT.id = id
 
   e := log.Front()
-  for e != nil && e.Value.(resolver.Transaction).Id() < op.id {
+  for e != nil && e.Value.(types.Transaction).Id() < op.id {
     e = e.Next()
   }
 
@@ -220,14 +220,14 @@ func (op *flipflopAddOp) resolveFlipFlop(id int64, log *list.List) (bool, resolv
   return true, newT
 }
 
-func (op *testAndSetOp) resolveTestAndSet(id int64, log *list.List) (bool, resolver.Transaction) {
+func (op *testAndSetOp) resolveTestAndSet(id int64, log *list.List) (bool, types.Transaction) {
   newT := new(testAndSetOp)
   newT.key = op.key
   newT.value = op.value
   newT.id = id
 
   e := log.Front()
-  for e != nil && e.Value.(resolver.Transaction).Id() < op.id {
+  for e != nil && e.Value.(types.Transaction).Id() < op.id {
     e = e.Next()
   }
 
@@ -261,8 +261,8 @@ func (op *testAndSetOp) resolveTestAndSet(id int64, log *list.List) (bool, resol
   return true, newT
 }
 
-func (kv *kvStore) Resolve(ancestorState *resolver.State, log *list.List,
-                           current resolver.Transaction) (bool, resolver.Transaction) {
+func (kv *kvStore) Resolve(ancestorState *types.State, log *list.List,
+                           current types.Transaction) (bool, types.Transaction) {
   switch x := current.(type) {
   case *lwwSetOp:
     debug.Assert(false, "Shouldn't have to resolve lwwSetOp %s", debug.Stringify(x))
@@ -283,7 +283,7 @@ func (kv *kvStore) Resolve(ancestorState *resolver.State, log *list.List,
   }
 }
 
-func makeState()resolver.State {
+func makeState()types.State {
   result := new(kvStore)
   result.id = 0
   result.data = make(map[string]string)

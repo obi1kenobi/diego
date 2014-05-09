@@ -1,18 +1,27 @@
 package core
 
+import "os"
+import "path"
+import "bytes"
+import "io/ioutil"
+import "encoding/base64"
+
+import "diego/debug"
 import "diego/resolver"
 import "diego/namespace"
 
 type diegoCore struct {
   nsManager *namespace.NamespaceManager
   trailingDistance int
-  makeState func()resolver.State
+  makeState func()types.State
+  durablePath string
 }
 
 /*
-CreateDiegoCore - factory method to make a diego core object.
+CreateDiegoCore - factory method to make a diego core object. If durablePath is "", no durable copy of transactions will be recorded. Otherwise, the path must
+  point to a directory which is either empty or the durable path of a previous diego core.
 */
-func CreateDiegoCore(trailingDistance int, makeState func()resolver.State) *diegoCore {
+func CreateDiegoCore(trailingDistance int, makeState func()types.State, durablePath string) *diegoCore {
   dc := new(diegoCore)
   dc.trailingDistance = trailingDistance
 
@@ -22,7 +31,43 @@ func CreateDiegoCore(trailingDistance int, makeState func()resolver.State) *dieg
 
   dc.makeState = makeState
   dc.nsManager = namespace.CreateNamespaceManager()
+
+  dc.durablePath = durablePath
+  if dc.durablePath != "" {
+    dc.loadDurableNamespaces()
+  }
+
   return dc
+}
+
+func unbase64(s string) (string, error) {
+  b, err := base64.URLEncoding.DecodeString(s)
+  if err != nil {
+    return "", err
+  }
+  buf := bytes.NewBuffer(b)
+  return buf.String(), nil
+}
+
+func (dc *diegoCore) loadDurableNamespaces() {
+  files, err := ioutil.ReadDir(dc.durablePath)
+  debug.EnsureNoError(err)
+  for _, f := range files {
+    if f.IsDir() {
+      ns, err := unbase64(f.Name())
+      if err != nil {
+        DPrintf(0, "Couldn't load namespace with non-base64 name %s", f.Name())
+      } else {
+        dc.robustGetNamespace(ns)
+      }
+    }
+  }
+}
+
+func (dc *diegoCore) makeResolverDurablePath(ns string) string {
+  buf := bytes.NewBufferString(ns)
+  dirname := base64.URLEncoding.EncodeToString(buf.Bytes())
+  return path.Join(dc.durablePath, dirname)
 }
 
 func (dc *diegoCore) robustGetNamespace(ns string) *resolver.Resolver {
@@ -43,13 +88,24 @@ func (dc *diegoCore) robustGetNamespace(ns string) *resolver.Resolver {
 }
 
 /*
+RemoveNamespace - deletes the specified namespace and its durable log.
+*/
+func (dc *diegoCore) RemoveNamespace(ns string) {
+  if dc.nsManager.RemoveNamespace(ns) && dc.durablePath != "" {
+    dir := dc.makeResolverDurablePath(ns)
+    err := os.RemoveAll(dir)
+    debug.EnsureNoError(err)
+  }
+}
+
+/*
 SubmitTransaction - submits the specified transaction to the specified namespace.
   The namespace is created if it doesn't exist.
   Return value: transaction success + all transactions that the client hasn't seen yet
 
   Safe for concurrent use.
 */
-func (dc *diegoCore) SubmitTransaction(ns string, t resolver.Transaction) (bool, []resolver.Transaction) {
+func (dc *diegoCore) SubmitTransaction(ns string, t types.Transaction) (bool, []types.Transaction) {
   rs := dc.robustGetNamespace(ns)
   tid := t.Id()
   ok := rs.SubmitTransaction(t)
@@ -60,11 +116,11 @@ func (dc *diegoCore) SubmitTransaction(ns string, t resolver.Transaction) (bool,
 /*
 TransactionsSinceId - gets all transactions in the given namespace that happened at or
   after the specified state id. If the namespace doesn't exist, the second return argument
-  will be false. See resolver.TransactionsSinceId for details.
+  will be false. See types.TransactionsSinceId for details.
 
   Safe for concurrent use.
 */
-func (dc *diegoCore) TransactionsSinceId(ns string, id int64) ([]resolver.Transaction, bool) {
+func (dc *diegoCore) TransactionsSinceId(ns string, id int64) ([]types.Transaction, bool) {
   rs, ok := dc.nsManager.GetNamespace(ns)
   if !ok {
     return nil, false
@@ -104,7 +160,7 @@ CurrentState - calls the callback with the current state for the given namespace
 
   Safe for concurrent use.
 */
-func (dc *diegoCore) CurrentState(ns string, stateProcessor func(resolver.State)) {
+func (dc *diegoCore) CurrentState(ns string, stateProcessor func(types.State)) {
   rs, ok := dc.nsManager.GetNamespace(ns)
   if !ok {
     return
