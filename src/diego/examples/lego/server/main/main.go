@@ -14,7 +14,7 @@ const address = ":8080"
 
 func main() {
   debug.DPrintf(0, "Creating diego...")
-  dc = core.CreateDiegoCore(500, server.MakeState)
+  dc = core.CreateDiegoCore(500, server.MakeState, "")
   debug.DPrintf(0, "Done.")
 
   debug.DPrintf(0, "Launching httpd...")
@@ -38,8 +38,9 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
   debug.DPrintf(0, "Got message: %v\n", buf)
 
   command, err := buf.ReadString('\n')
-  command = command[:len(command)-1]
   debug.EnsureNoError(err)
+
+  command = command[:len(command)-1]
   resultBuf := &bytes.Buffer{}
 
   switch command {
