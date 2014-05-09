@@ -2,11 +2,11 @@ package server
 
 import "container/list"
 import "diego/debug"
-import "diego/resolver"
+import "diego/types"
 import "fmt"
 import "reflect"
 
-func (universe *LegoUniverse) Apply(t resolver.Transaction) (bool, resolver.Transaction) {
+func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transaction) {
   xa := t.(*LegoTransaction)
 
   for _, op := range xa.ops {
@@ -42,9 +42,9 @@ func (universe *LegoUniverse) Apply(t resolver.Transaction) (bool, resolver.Tran
   return true, xa
 }
 
-func (universe *LegoUniverse) Resolve(ancestorState *resolver.State,
+func (universe *LegoUniverse) Resolve(ancestorState *types.State,
                                       log *list.List,
-                                      current resolver.Transaction) (bool, resolver.Transaction) {
+                                      current types.Transaction) (bool, types.Transaction) {
   // Ops:
   // - insert brick
   // - delete brick
@@ -84,7 +84,7 @@ func (universe *LegoUniverse) Resolve(ancestorState *resolver.State,
   return true, current
 }
 
-func MakeState() resolver.State {
+func MakeState() types.State {
   result := new(LegoUniverse)
   result.id = 0
   result.bricks = make(map[int64]LegoBrick)

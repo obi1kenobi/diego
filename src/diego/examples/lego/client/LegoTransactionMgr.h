@@ -14,7 +14,11 @@ class LegoTransactionMgr {
 
     bool Execute(const LegoTransaction &xa);
 
+    void CatchupWithServer();
+
   private:
+    void _EmitXaPrologue(std::ostream &os);
+    void _EmitXaEpilogue(std::ostream &os);
     std::string _SendToServer(const LegoTransaction &xa);
     bool _ParseResponse(const std::string &response,
                         std::vector<LegoTransaction> *serverLog);

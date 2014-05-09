@@ -18,13 +18,14 @@ LegoTransactionMgr::LegoTransactionMgr(LegoUniverse *universe) :
     _universe(universe),
     _xaIds(0)
 {
+    CatchupWithServer();
 }
 
 bool
 LegoTransactionMgr::Execute(const LegoTransaction &xa)
 {
-    std::vector<LegoTransaction> serverLog;
     std::string response = _SendToServer(xa);
+    std::vector<LegoTransaction> serverLog;
     bool success = _ParseResponse(response, &serverLog);
     _Execute(serverLog);
     return success;
@@ -33,21 +34,35 @@ LegoTransactionMgr::Execute(const LegoTransaction &xa)
 std::string
 LegoTransactionMgr::_SendToServer(const LegoTransaction &xa)
 {
-    // Assign transaction id
-    uint64_t xaID = _xaIds;
-
-    // Serialize xa
+    // Serialize transaction
     std::ostringstream os;
-    os << _universe->GetID() << " " << xaID << "\n";
+    _EmitXaPrologue(os);
     xa.Serialize(os);
-    os << "*\n";
+    _EmitXaEpilogue(os);
 
-    // XXX: send over wire
+    // Send over wire
     std::string msg = os.str();
     std::cout << "Sending transaction:\n" << os.str() << std::endl;
     std::string response = _SendText(msg);
     std::cout << "Got response:\n" << response << std::endl;
+
     return response;
+}
+
+void
+LegoTransactionMgr::_EmitXaPrologue(std::ostream &os)
+{
+    // Assign transaction id
+    uint64_t xaID = _xaIds;
+
+    os << "Submit\n";
+    os << _universe->GetID() << " " << xaID << "\n";
+}
+
+void
+LegoTransactionMgr::_EmitXaEpilogue(std::ostream &os)
+{
+    os << "*\n";
 }
 
 bool
@@ -156,4 +171,17 @@ LegoTransactionMgr::_SkipWhiteSpace(std::istream &input)
     while (input.good() && std::isspace(input.peek())) {
         input.get();
     }
+}
+
+void
+LegoTransactionMgr::CatchupWithServer()
+{
+    std::ostringstream os;
+    os << "TransactionsSince\n";
+    os << _xaIds << "\n";
+
+    std::string response = _SendText(os.str());
+    std::vector<LegoTransaction> serverLog;
+    bool success = _ParseResponse(response, &serverLog);
+    _Execute(serverLog);
 }
