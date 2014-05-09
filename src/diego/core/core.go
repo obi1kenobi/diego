@@ -7,6 +7,7 @@ import "io/ioutil"
 import "encoding/base64"
 
 import "diego/debug"
+import "diego/types"
 import "diego/resolver"
 import "diego/namespace"
 
@@ -24,8 +25,8 @@ type DiegoCore struct {
 CreateDiegoCore - factory method to make a diego core object. If durablePath is "", no durable copy of transactions will be recorded. Otherwise, the path must
   point to a directory which is either empty or the durable path of a previous diego core.
 */
-func CreateDiegoCore(trailingDistance int, makeState func()types.State, durablePath string) *diegoCore {
-  dc := new(diegoCore)
+func CreateDiegoCore(trailingDistance int, makeState func()types.State, durablePath string) *DiegoCore {
+  dc := new(DiegoCore)
   dc.trailingDistance = trailingDistance
 
   if dc.trailingDistance <= 0 {
@@ -52,14 +53,14 @@ func unbase64(s string) (string, error) {
   return buf.String(), nil
 }
 
-func (dc *diegoCore) loadDurableNamespaces() {
+func (dc *DiegoCore) loadDurableNamespaces() {
   files, err := ioutil.ReadDir(dc.durablePath)
   debug.EnsureNoError(err)
   for _, f := range files {
     if f.IsDir() {
       ns, err := unbase64(f.Name())
       if err != nil {
-        DPrintf(0, "Couldn't load namespace with non-base64 name %s", f.Name())
+        debug.DPrintf(0, "Couldn't load namespace with non-base64 name %s", f.Name())
       } else {
         dc.robustGetNamespace(ns)
       }
@@ -67,16 +68,16 @@ func (dc *diegoCore) loadDurableNamespaces() {
   }
 }
 
-func (dc *diegoCore) makeResolverDurablePath(ns string) string {
+func (dc *DiegoCore) makeResolverDurablePath(ns string) string {
   buf := bytes.NewBufferString(ns)
   dirname := base64.URLEncoding.EncodeToString(buf.Bytes())
   return path.Join(dc.durablePath, dirname)
 }
 
-func (dc *diegoCore) robustGetNamespace(ns string) *resolver.Resolver {
+func (dc *DiegoCore) robustGetNamespace(ns string) *resolver.Resolver {
   rs, ok := dc.nsManager.GetNamespace(ns)
   if !ok {
-    rs = resolver.CreateResolver(dc.makeState, dc.trailingDistance)
+    rs = resolver.CreateResolver(dc.makeState, dc.trailingDistance, dc.makeResolverDurablePath(ns))
     for !ok {
       ok = dc.nsManager.CreateNamespace(ns, rs)
       if !ok {
@@ -93,7 +94,7 @@ func (dc *diegoCore) robustGetNamespace(ns string) *resolver.Resolver {
 /*
 RemoveNamespace - deletes the specified namespace and its durable log.
 */
-func (dc *diegoCore) RemoveNamespace(ns string) {
+func (dc *DiegoCore) RemoveNamespace(ns string) {
   if dc.nsManager.RemoveNamespace(ns) && dc.durablePath != "" {
     dir := dc.makeResolverDurablePath(ns)
     err := os.RemoveAll(dir)
@@ -108,7 +109,7 @@ SubmitTransaction - submits the specified transaction to the specified namespace
 
   Safe for concurrent use.
 */
-func (dc *diegoCore) SubmitTransaction(ns string, t types.Transaction) (bool, []types.Transaction) {
+func (dc *DiegoCore) SubmitTransaction(ns string, t types.Transaction) (bool, []types.Transaction) {
   rs := dc.robustGetNamespace(ns)
   tid := t.Id()
   ok, _ := rs.SubmitTransaction(t)
@@ -123,7 +124,7 @@ TransactionsSinceId - gets all transactions in the given namespace that happened
 
   Safe for concurrent use.
 */
-func (dc *diegoCore) TransactionsSinceId(ns string, id int64) ([]types.Transaction, bool) {
+func (dc *DiegoCore) TransactionsSinceId(ns string, id int64) ([]types.Transaction, bool) {
   rs, ok := dc.nsManager.GetNamespace(ns)
   if !ok {
     return nil, false
@@ -163,7 +164,7 @@ CurrentState - calls the callback with the current state for the given namespace
 
   Safe for concurrent use.
 */
-func (dc *diegoCore) CurrentState(ns string, stateProcessor func(types.State)) {
+func (dc *DiegoCore) CurrentState(ns string, stateProcessor func(types.State)) {
   rs, ok := dc.nsManager.GetNamespace(ns)
   if !ok {
     return

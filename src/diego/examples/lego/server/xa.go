@@ -3,7 +3,7 @@ package server
 import "bytes"
 import "strconv"
 import "diego/debug"
-import "diego/resolver"
+import "diego/types"
 import "fmt"
 
 // Transactions
@@ -84,7 +84,7 @@ func DeserializeTransaction(b *bytes.Buffer) (string, *LegoTransaction) {
   }
 }
 
-func SerializeServerResult(ns string, success bool, xas []resolver.Transaction,
+func SerializeServerResult(ns string, success bool, xas []types.Transaction,
                            b *bytes.Buffer) {
   if success {
     b.WriteByte('1')
@@ -96,7 +96,7 @@ func SerializeServerResult(ns string, success bool, xas []resolver.Transaction,
   SerializeTransactionSlice(ns, xas, b)
 }
 
-func SerializeTransactionSlice(ns string, xas []resolver.Transaction, b *bytes.Buffer) {
+func SerializeTransactionSlice(ns string, xas []types.Transaction, b *bytes.Buffer) {
   for _, x := range xas {
     SerializeTransaction(ns, x.(*LegoTransaction), b)
   }
