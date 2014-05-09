@@ -70,7 +70,7 @@ func CreateTransactionLogger(basePath string) *TransactionLogger {
   tl.basePath = basePath
 
   err := os.MkdirAll(basePath, defaultPerm)
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   tl.clearedIndex = -1
   tl.newestFileIndex = -1
@@ -110,7 +110,7 @@ func (tl *TransactionLogger) Append(t types.Transaction) {
   var buffer bytes.Buffer
   enc := gob.NewEncoder(&buffer)
   err := enc.Encode(gtr{t})
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   b := buffer.Bytes()
   if len(b) > maxDataEntryLength {
@@ -118,7 +118,7 @@ func (tl *TransactionLogger) Append(t types.Transaction) {
   }
 
   _, err = tl.newestDataFile.Write(b)
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   tl.currentDataLength += int64(len(b))
 
@@ -146,12 +146,12 @@ func (tl *TransactionLogger) Close() {
   tl.closed = true
   if tl.newestIndexFile != nil {
     err := tl.newestIndexFile.Close()
-    ensureNoError(err)
+    debug.EnsureNoError(err)
     tl.newestIndexFile = nil
   }
   if tl.newestDataFile != nil {
     err := tl.newestDataFile.Close()
-    ensureNoError(err)
+    debug.EnsureNoError(err)
     tl.newestDataFile = nil
   }
 }
@@ -186,13 +186,13 @@ func (tl *TransactionLogger) readAllFileIndex(index int64, transactionProcessor 
   }
 
   indexFile, err := os.Open(tl.makePath(index, indexExtension))
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   dataFile, err := os.Open(tl.makePath(index, dataExtension))
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   fi, err := indexFile.Stat()
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   entryCount := fi.Size() / longLength
 
@@ -207,7 +207,7 @@ func (tl *TransactionLogger) readAllFileIndex(index int64, transactionProcessor 
   for i = 0; i < entryCount; i++ {
     dataItemStartOffset = dataItemEndOffset
     err = binary.Read(indexReader, binary.LittleEndian, &dataItemEndOffset)
-    ensureNoError(err)
+    debug.EnsureNoError(err)
 
     length := dataItemEndOffset - dataItemStartOffset
 
@@ -219,15 +219,15 @@ func (tl *TransactionLogger) readAllFileIndex(index int64, transactionProcessor 
     dec := gob.NewDecoder(buf)
     var gobbed gtr
     err = dec.Decode(&gobbed)
-    ensureNoError(err)
+    debug.EnsureNoError(err)
 
     transactionProcessor(gobbed.T)
   }
 
   err = indexFile.Close()
-  ensureNoError(err)
+  debug.EnsureNoError(err)
   err = dataFile.Close()
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 }
 
 func (tl *TransactionLogger) assertValid() {
@@ -240,13 +240,13 @@ func (tl *TransactionLogger) assertValid() {
                "Newest index file ptr is nil")
 
   fi, err := tl.newestDataFile.Stat()
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   debug.Assert(tl.currentDataLength == fi.Size(),
                "Expected data size %d but got %d", tl.currentDataLength, fi.Size())
 
   fi, err = tl.newestIndexFile.Stat()
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   entries := fi.Size() / longLength
 
@@ -273,7 +273,7 @@ func (tl *TransactionLogger) getFileEntryOffset(i int64) int64 {
   i--
   b := make([]byte, longLength)
   n, err := tl.newestIndexFile.ReadAt(b, i * longLength)
-  ensureNoError(err)
+  debug.EnsureNoError(err)
   if n < longLength {
     panic(fmt.Sprintf("Couldn't read enough bytes for an int64, only read %d", n))
   }
@@ -281,7 +281,7 @@ func (tl *TransactionLogger) getFileEntryOffset(i int64) int64 {
   var offset int64
   buffer := bytes.NewBuffer(b)
   err = binary.Read(buffer, binary.LittleEndian, &offset)
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   return offset
 }
@@ -295,11 +295,11 @@ func (tl *TransactionLogger) createNextFiles() {
   var err error
   if tl.newestIndexFile != nil {
     err = tl.newestIndexFile.Close()
-    ensureNoError(err)
+    debug.EnsureNoError(err)
   }
   if tl.newestDataFile != nil {
     err = tl.newestDataFile.Close()
-    ensureNoError(err)
+    debug.EnsureNoError(err)
   }
 
   indexPath := tl.makePath(tl.newestFileIndex, indexExtension)
@@ -311,18 +311,12 @@ func (tl *TransactionLogger) createNextFiles() {
   tl.newestIndexFile, err = os.OpenFile(indexPath,
                                         os.O_RDWR | os.O_CREATE,
                                         defaultPerm)
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   tl.newestDataFile, err = os.OpenFile(dataPath,
                                        os.O_RDWR | os.O_CREATE,
                                        defaultPerm)
-  ensureNoError(err)
-}
-
-func ensureNoError(err error) {
-  if err != nil {
-    panic(err)
-  }
+  debug.EnsureNoError(err)
 }
 
 func (tl *TransactionLogger) makePath(index int64, ext string) string {
@@ -331,13 +325,13 @@ func (tl *TransactionLogger) makePath(index int64, ext string) string {
 
 func tryLoadExistingWriter(tl *TransactionLogger) {
   dir, err := os.Open(tl.basePath)
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   names, err := dir.Readdirnames(0)
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   err = dir.Close()
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   if len(names) == 0 {
     tl.createNextFiles()
@@ -352,7 +346,7 @@ func tryLoadExistingWriter(tl *TransactionLogger) {
     }
 
     index, err := strconv.ParseInt(sp[0], 0, 64)
-    ensureNoError(err)
+    debug.EnsureNoError(err)
 
     if index < 0 {
       panic(fmt.Sprintf("Unexpected file index %s found at basePath %s", n, tl.basePath))
@@ -402,10 +396,10 @@ func tryLoadExistingWriter(tl *TransactionLogger) {
   tl.newestIndexFile, err = os.OpenFile(tl.makePath(maxFileIndex, indexExtension),
                                         os.O_RDWR | os.O_APPEND,
                                         defaultPerm)
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   fi, err := tl.newestIndexFile.Stat()
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   // if the newest index file is full, make new files
   if fi.Size() == expectedIndexFileLength {
@@ -432,7 +426,7 @@ func tryLoadExistingWriter(tl *TransactionLogger) {
                                        os.O_RDWR | os.O_APPEND,
                                        defaultPerm)
   fi, err = tl.newestDataFile.Stat()
-  ensureNoError(err)
+  debug.EnsureNoError(err)
 
   // verify the data file's length
   if fi.Size() != tl.currentDataLength {
