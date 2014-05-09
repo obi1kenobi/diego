@@ -20,12 +20,12 @@ func makeResolver()*resolver.Resolver {
 func stateEquals(a, b types.State)bool {
   txt := a.(*textState)
   txt2 := b.(*textState)
-  return txt.str == txt2.str && txt.id == txt2.id
+  return txt.Str == txt2.Str && txt.Tid == txt2.Tid
 }
 
 func textPredicate(start, finish int, str string) func(*testing.T, types.State)bool {
   return func(t *testing.T, s types.State)bool {
-    txt := s.(*textState).str
+    txt := s.(*textState).Str
     if finish == -1 {
       finish = len(txt)
     }
@@ -45,12 +45,12 @@ func parseTextOpToken(token string) textOp {
   switch {
   case token[0] == "{"[0]:
     num, _ := strconv.ParseInt(token[1:len(token)-1], 10, 32)
-    return textOp{opType: textDeleteOp, n: int(num)}
+    return textOp{OpType: textDeleteOp, N: int(num)}
   case token[0] == "'"[0]:
-    return textOp{opType: textInsertOp, str: token[1:len(token)-1]}
+    return textOp{OpType: textInsertOp, Str: token[1:len(token)-1]}
   default:
     num, _ := strconv.ParseInt(token, 10, 32)
-    return textOp{opType: textSkipOp, n: int(num)}
+    return textOp{OpType: textSkipOp, N: int(num)}
   }
 }
 
@@ -61,9 +61,9 @@ func makeTransaction(id int64, token types.RequestToken, str string) *textTransf
     ops[i] = parseTextOpToken(token)
   }
   transform := &textTransform{}
-  transform.id = id
-  transform.token = token
-  transform.ops = ops
+  transform.Tid = id
+  transform.Token = token
+  transform.Ops = ops
   return transform
 }
 
