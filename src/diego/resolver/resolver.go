@@ -9,7 +9,7 @@ import "diego/types"
 /*
 The default maximum distance between the current and the trailing state.
 */
-const DefaultTrailingDistance = 1000
+const DefaultTrailingDistance = 500000
 
 /*
 Resolver - The main resolver object that this framework provides.
