@@ -17,8 +17,8 @@ func TestLego(t *testing.T) {
 
 func makeTransaction(id int64, ops []*LegoOp) *LegoTransaction {
   xa := &LegoTransaction{}
-  xa.id = id
-  xa.ops = ops
+  xa.Tid = id
+  xa.Ops = ops
   return xa
 }
 
@@ -54,29 +54,29 @@ func checkBrick(t *testing.T,
   brick, _ := universe.GetBrick(brickId)
 
   // Check that brick matches expected brick id
-  if brick.id != brickId {
+  if brick.Bid != brickId {
     t.Errorf("Brick id %d is not at position: %v", brickId, expectedPosition)
     return false
   }
 
   // Check that position matches expected position
-  if brick.position != expectedPosition {
+  if brick.Position != expectedPosition {
     t.Errorf("Brick id %d is not at correct position. Expected %v, got %v",
-             brickId, expectedPosition, brick.position)
+             brickId, expectedPosition, brick.Position)
     return false
   }
 
   // Check brick foot print in the universe
-  if brick.size != expectedSize {
+  if brick.Size != expectedSize {
     t.Errorf("Brick id %d is the wrong size. Expected %v, got %v",
-             brickId, expectedSize, brick.size)
+             brickId, expectedSize, brick.Size)
     return false
   }
   start := []int32{ expectedPosition.data[0], expectedPosition.data[1], expectedPosition.data[2] }
   end := []int32{
-    start[0] + brick.size.data[0],
-    start[1] + brick.size.data[1],
-    start[2] + brick.size.data[2],
+    start[0] + brick.Size.data[0],
+    start[1] + brick.Size.data[1],
+    start[2] + brick.Size.data[2],
   }
   for x := start[0]; x < end[0]; x++ {
     for y := start[1]; y < end[1]; y++ {
@@ -93,16 +93,16 @@ func checkBrick(t *testing.T,
   }
 
   // Check brick orientation
-  if brick.orientation != expectedOrientation {
+  if brick.Orientation != expectedOrientation {
     t.Errorf("Brick id %d has the wrong orientation. Expected %v, got %v",
-             brickId, expectedOrientation, brick.orientation)
+             brickId, expectedOrientation, brick.Orientation)
     return false
   }
 
   // Check brick color
-  if brick.color != expectedColor {
+  if brick.Color != expectedColor {
     t.Errorf("Brick id %d has the wrong color. Expected %v, got %v",
-             brickId, expectedColor, brick.color)
+             brickId, expectedColor, brick.Color)
     return false
   }
 

@@ -10,7 +10,7 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
 
   // XXX: We blindly apply all transactions here, regardless of current state
 
-  for _, op := range xa.ops {
+  for _, op := range xa.Ops {
     if op.OpType == LegoOpCreateBrick {
       universe.numBricks++
       brickId := universe.numBricks
@@ -39,15 +39,15 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
       case LegoOpModifyBrickColor:
         debug.DPrintf(1, "Modify brick id %d color to %f %f %f\n", op.BrickID,
                       op.Color.data[0], op.Color.data[1], op.Color.data[2])
-        brick.color = op.Color
+        brick.Color = op.Color
       case LegoOpModifyBrickOrientation:
         debug.DPrintf(1, "Modify brick id %d orientation to %s\n", op.BrickID,
                       op.Orientation)
-        brick.orientation = op.Orientation
+        brick.Orientation = op.Orientation
       case LegoOpModifyBrickSize:
         debug.DPrintf(1, "Modify brick id %d size to %d %d %d\n", op.BrickID,
                       op.Size.data[0], op.Size.data[1], op.Size.data[2])
-        brick.size = op.Size
+        brick.Size = op.Size
       default:
         debug.Assert(false, "Found invalid op: %v", op)
       }
@@ -73,14 +73,14 @@ func (universe *LegoUniverse) Resolve(ancestorState *types.State,
   //    - two users inserting the same brick at same position.
   //    - Resolution: instead of inserting a new brick, simply modify
   currentXa := current.(*LegoTransaction)
-  currentOp := currentXa.ops[0]
+  currentOp := currentXa.Ops[0]
   for e := log.Front(); e != nil; e = e.Next() {
     xa := e.Value.(*LegoTransaction)
-    if xa.id < currentXa.id {
+    if xa.Tid < currentXa.Tid {
       continue
     }
 
-    op := xa.ops[0]
+    op := xa.Ops[0]
 
     // Check for conflicting operations on same brick
     opId := op.BrickID
