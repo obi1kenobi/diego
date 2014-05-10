@@ -4,44 +4,40 @@ import "bytes"
 import "strconv"
 import "diego/debug"
 import "diego/types"
-import "fmt"
 
 // Transactions
 type LegoTransaction struct {
-  id int64
-  ops []interface{}
+  Tid int64
+  Ops []*LegoOp
 }
 
 func (xa *LegoTransaction) SetId(id int64) {
-  xa.id = id
+  xa.Tid = id
 }
 
 func (xa *LegoTransaction) Id() int64 {
-  return xa.id
+  return xa.Tid
 }
 
 func SerializeTransaction(ns string, xa *LegoTransaction, b *bytes.Buffer) {
   b.WriteString(ns)
-  serializeInt64(xa.id, b)
+  serializeInt64(xa.Tid, b)
   b.WriteByte('\n')
-  for _, x := range xa.ops {
-    s := x.(legoSerializable)
-    s.serialize(b)
+  for _, op := range xa.Ops {
+    op.serialize(b)
   }
   b.WriteByte(legoTerminator)
   b.WriteByte('\n')
 }
 
 func DeserializeTransaction(b *bytes.Buffer) (string, *LegoTransaction) {
-  fmt.Printf("DeserializeTransaction: %v\n", b);
-
   xa := new(LegoTransaction)
   ns, err := b.ReadString(legoDelim)
   ns = ns[:len(ns)-1]
   debug.EnsureNoError(err)
   val, err := b.ReadString('\n')
   debug.EnsureNoError(err)
-  xa.id, err = strconv.ParseInt(val[:len(val)-1], 10, 64)
+  xa.Tid, err = strconv.ParseInt(val[:len(val)-1], 10, 64)
   debug.EnsureNoError(err)
 
   for {
@@ -54,33 +50,10 @@ func DeserializeTransaction(b *bytes.Buffer) (string, *LegoTransaction) {
 
     btemp := bytes.NewBufferString(val[:len(val)-1])
     btemp.WriteByte(legoDelim)
-    val, err = btemp.ReadString(legoDelim)
-    debug.EnsureNoError(err)
-    val = val[:len(val)-1]
-    switch val {
-    case createBrick:
-      op := new(LegoOpCreateBrick)
-      op.deserialize(btemp)
-      xa.ops = append(xa.ops, op)
-    case deleteBrick:
-      op := new(LegoOpDeleteBrick)
-      // op.deserialize(btemp)
-      xa.ops = append(xa.ops, op)
-    case modifyBrickColor:
-      op := new(LegoOpModifyBrickColor)
-      // op.deserialize(btemp)
-      xa.ops = append(xa.ops, op)
-    case modifyBrickOrientation:
-      op := new(LegoOpModifyBrickOrientation)
-      // op.deserialize(btemp)
-      xa.ops = append(xa.ops, op)
-    case modifyBrickSize:
-      op := new(LegoOpModifyBrickSize)
-      // op.deserialize(btemp)
-      xa.ops = append(xa.ops, op)
-    default:
-      debug.Assert(false, "Unknown op type: %v", val)
-    }
+
+    op := new(LegoOp)
+    op.deserialize(btemp)
+    xa.Ops = append(xa.Ops, op)
   }
 }
 
@@ -100,4 +73,6 @@ func SerializeTransactionSlice(ns string, xas []types.Transaction, b *bytes.Buff
   for _, x := range xas {
     SerializeTransaction(ns, x.(*LegoTransaction), b)
   }
+  b.WriteByte('#')
+  b.WriteByte('\n')
 }

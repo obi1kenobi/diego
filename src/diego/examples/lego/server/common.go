@@ -74,6 +74,21 @@ func deserializeInt64(b *bytes.Buffer) int64 {
   return res
 }
 
+func serializeUint64(x uint64, b *bytes.Buffer) {
+  b.WriteByte(legoDelim)
+  b.WriteString(strconv.FormatUint(x, 10))
+}
+
+func deserializeUint64(b *bytes.Buffer) uint64 {
+  val, err := b.ReadString(legoDelim)
+  debug.EnsureNoError(err)
+
+  res, err := strconv.ParseUint(val[:len(val)-1], 10, 64)
+  debug.EnsureNoError(err)
+
+  return res
+}
+
 func serializeFloat32(x float32, b *bytes.Buffer) {
   b.WriteByte(legoDelim)
   b.WriteString(strconv.FormatFloat(float64(x), 'g', -1, 32))

@@ -6,6 +6,7 @@ set(BIN_NAME LegoClient)
 
 set(LIBRARY_CPP_FILES
     BBox3d.cpp
+    Debug.cpp
     LegoApp.cpp
     LegoBrick.cpp
     LegoMainWindow.cpp
@@ -14,11 +15,14 @@ set(LIBRARY_CPP_FILES
     LegoTransaction.cpp
     LegoTransactionMgr.cpp
     LegoUniverse.cpp
+    LegoVoxelizer.cpp
     Matrix4d.cpp
     Mesh.cpp
     Notice.cpp
     NoticeMgr.cpp
+    Ray3d.cpp
     Singleton.cpp
+    STLReader.cpp
     STLWriter.cpp
     TriBox3.cpp
     TriangleMesh.cpp
