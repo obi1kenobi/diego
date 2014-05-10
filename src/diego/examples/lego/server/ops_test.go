@@ -8,14 +8,14 @@ import "diego/resolver"
 const trailingDistance = 50
 
 func setup()(*resolver.Resolver, *LegoUniverse) {
-  return resolver.CreateResolver(MakeState, trailingDistance), MakeState().(*LegoUniverse)
+  return resolver.CreateResolver(MakeState, trailingDistance, ""), MakeState().(*LegoUniverse)
 }
 
 func TestLego(t *testing.T) {
   // rs, s := setup()
 }
 
-func makeTransaction(id int64, ops []interface{}) *LegoTransaction {
+func makeTransaction(id int64, ops []*LegoOp) *LegoTransaction {
   xa := &LegoTransaction{}
   xa.id = id
   xa.ops = ops
@@ -44,8 +44,8 @@ func checkBrick(t *testing.T,
   }
 
   // Check that brick was inserted at given position
-  gridId, ok := universe.GetBrickIdAtPosition(expectedPosition)
-  if !ok || brickId != gridId {
+  gridId := universe.GetBrickIdAtPosition(expectedPosition)
+  if brickId != gridId {
     t.Errorf("Brick id %d is not at position: %v", brickId, expectedPosition)
     return false
   }
@@ -81,8 +81,11 @@ func checkBrick(t *testing.T,
   for x := start[0]; x < end[0]; x++ {
     for y := start[1]; y < end[1]; y++ {
       for z := start[2]; z < end[2]; z++ {
-        if brickId != universe.grid[x][y][z] {
-          t.Errorf("Brick id %d was not inserted within region of its footprint", brickId)
+        gridBrickId := universe.readBrick(MakeVec3i(x, y, z))
+        if brickId != gridBrickId {
+          t.Errorf("Brick id %d was not inserted within region of its footprint. " +
+                   "Unexpected brick id %d found at (%d, %d, %d)",
+                   brickId, gridBrickId, x, y, z)
           return false
         }
       }
@@ -106,21 +109,26 @@ func checkBrick(t *testing.T,
   return true
 }
 
-func legoCreatePredicate(ops []interface{}) func(*testing.T, types.State) bool {
+func legoCreatePredicate(ops []*LegoOp) func(*testing.T, types.State) bool {
   return func(t *testing.T, s types.State) bool {
-    op := ops[0].(*LegoOpCreateBrick)
+    op := ops[0]
     universe := s.(*LegoUniverse)
 
     // Did something get inserted?
-    id, ok := universe.GetBrickIdAtPosition(op.position)
-    if !ok || id < 1 {
-      t.Errorf("No brick was inserted at position %d %d %d\n",
-               op.position.data[0], op.position.data[1], op.position.data[2])
-      return false
+    for x := op.Position.data[0]; x < op.Position.data[0] + op.Size.data[0]; x++ {
+      for y := op.Position.data[1]; y < op.Position.data[1] + op.Size.data[1]; y++ {
+        for z := op.Position.data[2]; z < op.Position.data[2] + op.Size.data[2]; z++ {
+          id := universe.GetBrickIdAtPosition(MakeVec3i(x, y, z))
+            if id < 1 {
+              t.Errorf("No brick was inserted at position %d %d %d\n",
+                       op.Position.data[0], op.Position.data[1], op.Position.data[2])
+                return false
+            }
+            // Does the brick match the one we are inserting?
+            checkBrick(t, universe, id, op.Position, op.Size, op.Orientation, op.Color)
+        }
+      }
     }
-
-    // Does the brick match the one we are inserting?
-    checkBrick(t, universe, id, op.position, op.size, op.orientation, op.color)
 
     return true
   }
@@ -134,9 +142,9 @@ func TestCreateOp(t *testing.T) {
   rs, s := setup()
 
   // Transactions for tests and expected results
-  xas := [][]interface{} {
-    { &LegoOpCreateBrick { MakeVec3i(0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
-    { &LegoOpCreateBrick { MakeVec3i(10, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+  xas := [][]*LegoOp {
+    { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+    { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i(10, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(0, 1, 0) } },
   }
   expectedResult := []tests.TransactionResult {
     tests.Success,

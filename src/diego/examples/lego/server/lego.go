@@ -54,7 +54,9 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
     }
   }
 
-  universe.displayLevel(0)
+  if (false) {
+    universe.displayLevel(0)
+  }
 
   return true, xa
 }

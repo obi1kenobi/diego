@@ -81,9 +81,7 @@ func (universe *LegoUniverse) readBrick(position Vec3i) int64 {
 }
 
 func (universe *LegoUniverse) GetBrickIdAtPosition(position Vec3i) int64 {
-  validateBrickPosition(position)
-  x, y, z := getGridIndex(position)
-  return universe.grid[x][y][z]
+  return universe.readBrick(position)
 }
 
 func (universe *LegoUniverse) GetBrick(id int64) (*LegoBrick, bool) {
@@ -92,12 +90,10 @@ func (universe *LegoUniverse) GetBrick(id int64) (*LegoBrick, bool) {
 }
 
 func (universe *LegoUniverse) displayLevel(level int) {
-  if false {
-    for y := legoGridSize[1] - 1; y >= int32(0); y-- {
-      for x := int32(0); x < legoGridSize[0]; x++ {
-        fmt.Printf("%02d ", universe.grid[x][y][level])
-      }
-      fmt.Printf("\n")
+  for y := legoGridSize[1] - 1; y >= int32(0); y-- {
+    for x := int32(0); x < legoGridSize[0]; x++ {
+      fmt.Printf("%02d ", universe.grid[x][y][level])
     }
+    fmt.Printf("\n")
   }
 }

@@ -4,8 +4,8 @@ import "bytes"
 import "testing"
 
 func TestSerializeCreateOp(t *testing.T) {
-  op := &LegoOpCreateBrick { MakeVec3i(0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) }
-  ops := []interface{} { op }
+  op := &LegoOp { LegoOpCreateBrick, 0, MakeVec3i(0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) }
+  ops := []*LegoOp { op }
   xa := &LegoTransaction{0, ops}
   ns := "testNs"
 
@@ -22,17 +22,17 @@ func TestSerializeCreateOp(t *testing.T) {
     t.Errorf("expected len(xa.ops)=%d got len(resXa.ops)=%d", len(xa.ops), len(resXa.ops))
   }
 
-  resOp := resXa.ops[0].(*LegoOpCreateBrick)
-  if !op.position.Equal(resOp.position) {
+  resOp := resXa.ops[0]
+  if !op.Position.Equal(resOp.Position) {
     t.Errorf("positions not equal: %v vs %v", op, resOp)
   }
-  if !op.size.Equal(resOp.size) {
+  if !op.Size.Equal(resOp.Size) {
     t.Errorf("sizes not equal: %v vs %v", op, resOp)
   }
-  if op.orientation != resOp.orientation {
+  if op.Orientation != resOp.Orientation {
     t.Errorf("orientations not equal: %v vs %v", op, resOp)
   }
-  if !op.color.Equal(resOp.color) {
+  if !op.Color.Equal(resOp.Color) {
     t.Errorf("colors not equal: %v vs %v", op, resOp)
   }
 }
