@@ -10,7 +10,7 @@ import "diego/types"
 const trailingDistance = 50
 
 func setup()(*resolver.Resolver, *textState, func() types.RequestToken) {
-  return makeResolver(), makeState().(*textState), tests.MakeRequestTokenGenerator(int64(0))
+  return makeResolver(), makeState().(*textState), types.MakeRequestTokenGenerator(int64(0))
 }
 
 func makeResolver()*resolver.Resolver {
@@ -76,10 +76,12 @@ func TestAtMostOnce(t *testing.T) {
 
   testData := []tests.TestDataItem {
     tests.MakeTestDataItem(makeTransaction(0, token1, "'aaa'"), tests.Success, textPredicate(0, -1,"aaa")),
-    tests.MakeTestDataItem(makeTransaction(1, token2, "1"), tests.Success, textPredicate(0, -1,"aaa")),
-    tests.MakeTestDataItem(makeTransaction(2, token1, "1, 1"), tests.Failure, textPredicate(0, -1, "aaa")),
-    tests.MakeTestDataItem(makeTransaction(1, token3, "2"), tests.Success, textPredicate(0, -1, "aaa")),
-    tests.MakeTestDataItem(makeTransaction(4, token2, "1"), tests.Failure, textPredicate(0, -1, "aaa")),
+    tests.MakeTestDataItem(makeTransaction(1, token2, "'b'"), tests.Success, textPredicate(0, -1, "baaa")),
+    tests.MakeTestDataItem(makeTransaction(2, token3, "2, 'b'"), tests.Success, textPredicate(0, -1, "babaa")),
+    tests.MakeTestDataItem(makeTransaction(1, nt(), "1, 'cc'"), tests.Success, textPredicate(0, -1, "babccaa")),
+    tests.MakeTestDataItem(makeTransaction(1, token2, "'b'"), tests.Stale, textPredicate(0, -1, "babccaa")),
+    tests.MakeTestDataItem(makeTransaction(2, token3, "2, 'b'"), tests.Stale, textPredicate(0, -1, "babccaa")),
+    tests.MakeTestDataItem(makeTransaction(4, nt(), "1, 'd', 3, 'dd'"), tests.Success, textPredicate(0, -1, "bdabcddcaa")),
   }
 
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)

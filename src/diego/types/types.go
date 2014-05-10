@@ -29,3 +29,15 @@ type RequestToken struct {
   ClientId int64
   ReqId int64
 }
+
+/*
+MakeRequestTokenGenerator - quick and dirty way of generating unique request tokens.
+Not thread safe.
+*/
+func MakeRequestTokenGenerator(clientId int64) func()RequestToken {
+  reqId := int64(0)
+  return func() RequestToken {
+    reqId++
+    return RequestToken{ClientId: clientId, ReqId: reqId}
+  }
+}
