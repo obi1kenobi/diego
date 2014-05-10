@@ -1,77 +1,101 @@
 package server
 
 import "bytes"
+import "diego/debug"
 
-const createBrick = "CreateBrick"
-const deleteBrick = "DeleteBrick"
-const modifyBrickColor = "ModifyBrickColor"
-const modifyBrickOrientation = "ModifyBrickOrientation"
-const modifyBrickSize = "ModifyBrickSize"
+const (
+  LegoOpCreateBrick = "CreateBrick"
+  LegoOpDeleteBrick = "DeleteBrick"
+  LegoOpModifyBrickPosition = "ModifyBrickPosition"
+  LegoOpModifyBrickColor = "ModifyBrickColor"
+  LegoOpModifyBrickOrientation = "ModifyBrickOrientation"
+  LegoOpModifyBrickSize = "ModifyBrickSize"
+)
+type LegoOpType string
 
 // Ops
-type LegoOpCreateBrick struct {
-  position Vec3i
-  size Vec3i
-  orientation BrickOrientation
-  color Vec3f
+type LegoOp struct {
+  OpType LegoOpType
+  BrickID int64
+  Position Vec3i
+  Size Vec3i
+  Orientation BrickOrientation
+  Color Vec3f
 }
 
-type LegoOpDeleteBrick struct {
-  id int64
-}
-
-type LegoOpModifyBrickColor struct {
-  id int64
-  color Vec3f
-}
-
-type LegoOpModifyBrickOrientation struct {
-  id int64
-  orientation BrickOrientation
-}
-
-type LegoOpModifyBrickSize struct {
-  id int64
-  size Vec3i
-}
-
-func getOpId(op interface{}) int64 {
-  switch typedOp := op.(type) {
-  case *LegoOpCreateBrick: return 0
-  case *LegoOpModifyBrickColor: return typedOp.id
-  case *LegoOpModifyBrickOrientation: return typedOp.id
-  case *LegoOpModifyBrickSize: return typedOp.id
-  case *LegoOpDeleteBrick: return typedOp.id
-  }
-  return 0
-}
-
-func isModifyOp(op interface{}) bool {
-  switch op.(type) {
-  case *LegoOpModifyBrickColor: return true
-  case *LegoOpModifyBrickOrientation: return true
-  case *LegoOpModifyBrickSize: return true
+func (op *LegoOp) isModifyOp() bool {
+  switch op.OpType {
+  case LegoOpModifyBrickColor: return true
+  case LegoOpModifyBrickOrientation: return true
+  case LegoOpModifyBrickSize: return true
   }
   return false
 }
 
-func isDeleteOp(op interface{}) bool {
-  _, ok := op.(*LegoOpDeleteBrick)
-  return ok
-}
-
-func (op *LegoOpCreateBrick) serialize(b *bytes.Buffer) {
-  b.WriteString(createBrick)
-  op.position.serialize(b)
-  op.size.serialize(b)
-  serializeInt32(int32(op.orientation), b)
-  op.color.serialize(b)
+func (op *LegoOp) serialize(b *bytes.Buffer) {
+  switch op.OpType {
+  case LegoOpCreateBrick:
+    b.WriteString(LegoOpCreateBrick)
+    op.Position.serialize(b)
+    op.Size.serialize(b)
+    serializeInt32(int32(op.Orientation), b)
+    op.Color.serialize(b)
+  case LegoOpDeleteBrick:
+    b.WriteString(LegoOpDeleteBrick)
+    serializeInt64(op.BrickID, b)
+  case LegoOpModifyBrickPosition:
+    b.WriteString(LegoOpModifyBrickPosition)
+    serializeInt64(op.BrickID, b)
+    op.Position.serialize(b)
+  case LegoOpModifyBrickSize:
+    b.WriteString(LegoOpModifyBrickSize)
+    serializeInt64(op.BrickID, b)
+    op.Size.serialize(b)
+  case LegoOpModifyBrickColor:
+    b.WriteString(LegoOpModifyBrickColor)
+    serializeInt64(op.BrickID, b)
+    op.Color.serialize(b)
+  case LegoOpModifyBrickOrientation:
+    b.WriteString(LegoOpModifyBrickOrientation)
+    serializeInt64(op.BrickID, b)
+    serializeInt32(int32(op.Orientation), b)
+  default:
+    debug.Assert(false, "Unknown op type: %v", op.OpType)
+  }
   b.WriteByte('\n')
 }
 
-func (op *LegoOpCreateBrick) deserialize(b *bytes.Buffer) {
-  op.position.deserialize(b)
-  op.size.deserialize(b)
-  op.orientation = BrickOrientation(deserializeInt32(b))
-  op.color.deserialize(b)
+func (op *LegoOp) deserialize(b *bytes.Buffer) {
+  opType, err := b.ReadString(legoDelim)
+  debug.EnsureNoError(err)
+  opType = opType[:len(opType) - 1]
+  switch opType {
+  case LegoOpCreateBrick:
+    op.OpType = LegoOpCreateBrick
+    op.Position.deserialize(b)
+    op.Size.deserialize(b)
+    op.Orientation = BrickOrientation(deserializeInt32(b))
+    op.Color.deserialize(b)
+  case LegoOpDeleteBrick:
+    op.OpType = LegoOpDeleteBrick
+    op.BrickID = deserializeInt64(b)
+  case LegoOpModifyBrickPosition:
+    op.OpType = LegoOpModifyBrickPosition
+    op.BrickID = deserializeInt64(b)
+    op.Position.deserialize(b)
+  case LegoOpModifyBrickSize:
+    op.OpType = LegoOpCreateBrick
+    op.BrickID = deserializeInt64(b)
+    op.Size.deserialize(b)
+  case LegoOpModifyBrickColor:
+    op.OpType = LegoOpModifyBrickColor
+    op.BrickID = deserializeInt64(b)
+    op.Color.deserialize(b)
+  case LegoOpModifyBrickOrientation:
+    op.OpType = LegoOpModifyBrickOrientation
+    op.BrickID = deserializeInt64(b)
+    op.Orientation = BrickOrientation(deserializeInt32(b))
+  default:
+    debug.Assert(false, "Unknown op type: %v", op.OpType)
+  }
 }

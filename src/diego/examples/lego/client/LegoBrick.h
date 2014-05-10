@@ -20,7 +20,7 @@ class LegoBrick {
 
     bool Destroy();
 
-    uint64_t GetID() const {
+    int64_t GetID() const {
         return _id;
     }
 
@@ -51,7 +51,7 @@ class LegoBrick {
     friend class LegoTransactionMgr;
 
     LegoBrick(LegoUniverse *universe,
-              uint64_t id,
+              int64_t id,
               const MfVec3i &position,
               const MfVec3i &size,
               Orientation orientation,
@@ -76,7 +76,7 @@ class LegoBrick {
 
     LegoUniverse *_universe;
     LegoTransactionMgr *_xaMgr;
-    uint64_t _id;
+    int64_t _id;
     MfVec3i _position;
     MfVec3i _size;
     uint32_t _orientation;

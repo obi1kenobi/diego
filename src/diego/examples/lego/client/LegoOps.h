@@ -11,10 +11,10 @@ class LegoOp {
   public:
     enum Type {
         CREATE_BRICK,
-        MODIFY_POSITION,
-        MODIFY_SIZE,
-        MODIFY_ORIENTATION,
-        MODIFY_COLOR,
+        MODIFY_BRICK_POSITION,
+        MODIFY_BRICK_SIZE,
+        MODIFY_BRICK_ORIENTATION,
+        MODIFY_BRICK_COLOR,
         DELETE_BRICK,
     };
 
@@ -23,18 +23,18 @@ class LegoOp {
                                LegoBrick::Orientation orientation,
                                const MfVec3f &color);
 
-    static LegoOp MakeModifyPositionOp(uint64_t brickID,
-                                       const MfVec3i &position);
+    static LegoOp MakeModifyBrickPositionOp(int64_t brickID,
+                                            const MfVec3i &position);
 
-    static LegoOp MakeModifySizeOp(uint64_t brickID,
-                                   const MfVec3i &size);
+    static LegoOp MakeModifyBrickSizeOp(int64_t brickID,
+                                        const MfVec3i &size);
 
-    static LegoOp MakeModifyOrientationOp(uint64_t brickID, 
-                                          LegoBrick::Orientation orientationt);
+    static LegoOp MakeModifyBrickOrientationOp(int64_t brickID, 
+                                               LegoBrick::Orientation orientationt);
 
-    static LegoOp MakeModifyColorOp(uint64_t brickID, const MfVec3f &color);
+    static LegoOp MakeModifyBrickColorOp(int64_t brickID, const MfVec3f &color);
 
-    static LegoOp MakeDeleteBrickOp(uint64_t brickID);
+    static LegoOp MakeDeleteBrickOp(int64_t brickID);
 
     // Deserialization constructor
     LegoOp(std::istream &is);
@@ -47,7 +47,7 @@ class LegoOp {
         return _type;
     }
 
-    uint64_t GetBrickID() const {
+    int64_t GetBrickID() const {
         return _brickID;
     }
 
@@ -76,7 +76,7 @@ class LegoOp {
 
     bool _valid;
     Type _type;
-    uint64_t _brickID;
+    int64_t _brickID;
     MfVec3i _position;
     MfVec3i _size;
     uint32_t _orientation;

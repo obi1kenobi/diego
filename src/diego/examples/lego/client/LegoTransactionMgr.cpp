@@ -28,9 +28,13 @@ LegoTransactionMgr::Execute(const LegoTransaction &xa)
     // Send transaction to server
     std::string response = _SendToServer(xa);
 
+    if (response.empty()) {
+        return false;
+    }
+
     // Was our transaction successful?
     std::istringstream is(response);
-    bool success;
+    bool success = false;
     is >> success;
 
     // Parse response (server log) and execute transactions from it
@@ -195,19 +199,19 @@ LegoTransactionMgr::_Execute(const std::vector<LegoTransaction> &xas)
                                         op.GetOrientation(),
                                         op.GetColor());
             } break;
-            case LegoOp::MODIFY_POSITION: {
+            case LegoOp::MODIFY_BRICK_POSITION: {
                 LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
                 brick->_SetPosition(op.GetPosition());
             } break;
-            case LegoOp::MODIFY_SIZE: {
+            case LegoOp::MODIFY_BRICK_SIZE: {
                 LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
                 brick->_SetSize(op.GetSize());
             } break;
-            case LegoOp::MODIFY_ORIENTATION: {
+            case LegoOp::MODIFY_BRICK_ORIENTATION: {
                 LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
                 brick->_SetOrientation(op.GetOrientation());
             } break;
-            case LegoOp::MODIFY_COLOR: {
+            case LegoOp::MODIFY_BRICK_COLOR: {
                 LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
                 brick->_SetColor(op.GetColor());
             } break;
