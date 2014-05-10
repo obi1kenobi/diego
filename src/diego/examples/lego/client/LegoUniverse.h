@@ -69,6 +69,7 @@ class LegoUniverse {
 
     uint64_t _id;
     LegoTransactionMgr _xaMgr;
+    LegoTransaction *_xa;
     MfVec3i _gridSize;
     MfVec3i _gridMin;
     MfVec3i _gridMax;

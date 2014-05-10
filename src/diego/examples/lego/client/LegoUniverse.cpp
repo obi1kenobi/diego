@@ -8,6 +8,7 @@
 LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
     _id(0),
     _xaMgr(this),
+    _xa(NULL),
     _gridSize(gridSize),
     _XY(gridSize[0] * gridSize[1]),
     _grid(gridSize[0] * gridSize[1] * gridSize[2], 0),
@@ -45,7 +46,7 @@ LegoUniverse::ProcessOp(const std::string &opText)
     }
     LegoTransaction xa;
     xa.AddOp(op);
-    bool success = _xaMgr.Execute(xa);
+    bool success = _xaMgr.ExecuteXa(xa);
     return success;
 }
 
@@ -82,9 +83,8 @@ LegoUniverse::CreateBrick(const MfVec3i &position,
     // XXX: validate that a brick can be inserted at given location
 
     // Create transaction and send to server
-    LegoTransaction xa;
-    xa.AddOp(LegoOp::MakeCreateOp(position, size, orientation, color));
-    bool success = _xaMgr.Execute(xa);
+    LegoOp op = LegoOp::MakeCreateOp(position, size, orientation, color);
+    bool success = _xaMgr.ExecuteOp(op);
     return success;
 }
 

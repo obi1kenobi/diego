@@ -162,7 +162,7 @@ LegoVoxelizer::Voxelize(GfTriangleMesh *mesh,
                         const uint32_t triIndex = *t;
                         const GfTriangle &tri = triangles[triIndex];
                         double depth;
-                        const double EPSILON = 0.0000000001;
+                        const double EPSILON = 0.00001;
                         if (ray.GetTriangleIntersection(&depth,
                                                         vertices[tri.indices[0]],
                                                         vertices[tri.indices[1]],
@@ -209,6 +209,8 @@ LegoVoxelizer::Voxelize(GfTriangleMesh *mesh,
         MfVec3f(1, 1, 1),
     };
     int numBrickColors = sizeof(colors) / sizeof(colors[0]);
+
+    _universe->GetTransactionMgr()->OpenTransaction();
     for (int x = 0; x < gridSize[0]; ++x) {
         for (int y = 0; y < gridSize[1]; ++y) {
             for (int z = 0; z < gridSize[2]; ++z) {
@@ -222,4 +224,5 @@ LegoVoxelizer::Voxelize(GfTriangleMesh *mesh,
             }
         }
     }
+    _universe->GetTransactionMgr()->CloseTransaction();
 }
