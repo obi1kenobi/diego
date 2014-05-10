@@ -1,0 +1,17 @@
+On David's Late 2013 macbook, commit 749dc0, on kvstore benchmarks, running `go test -bench .`
+
+BenchmarkRecentTransactionTrailing50   5000000         600 ns/op
+BenchmarkRecentTransactionTrailing250  5000000         547 ns/op
+BenchmarkRecentTransactionTrailing1000   5000000         542 ns/op
+BenchmarkDurableRecentTransactionTrailing50    10000      128489 ns/op
+BenchmarkDurableRecentTransactionTrailing250     10000      127720 ns/op
+BenchmarkDurableRecentTransactionTrailing1000    10000      125902 ns/op
+BenchmarkFullLogReadTrailing50   1000000        2561 ns/op
+BenchmarkFullLogReadTrailing250   500000        5996 ns/op
+BenchmarkFullLogReadTrailing1000    100000       18236 ns/op
+BenchmarkDurableFullLogReadTrailing50    10000      133725 ns/op
+BenchmarkDurableFullLogReadTrailing250     10000      139285 ns/op
+BenchmarkDurableFullLogReadTrailing1000    10000      163789 ns/op
+ok    diego/examples/kvstore  29.119s
+
+
