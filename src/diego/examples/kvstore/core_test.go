@@ -37,11 +37,11 @@ func TestBasicCrashRestore (t *testing.T) {
 
   c1 := core.CreateDiegoCore(20, makeState, basePath)
   for i := int64(0); i < 10; i++ {
-    success, _ := c1.SubmitTransaction("foo", &appendOp{i, "a", "b"})
+    success, _ := c1.SubmitTransaction("foo", &appendOp{OpCore{i, "a", "b"}})
     debug.Assert(success, "transaction set 1-%d did not succeed!", i)
   }
   for i := int64(0); i < 30; i++ {
-    success, _ := c1.SubmitTransaction("bar", &appendOp{i, "c", "d"})
+    success, _ := c1.SubmitTransaction("bar", &appendOp{OpCore{i, "c", "d"}})
     debug.Assert(success, "transaction set 2-%d did not succeed!", i)
   }
   core.KillCore(c1)

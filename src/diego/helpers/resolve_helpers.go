@@ -1,5 +1,7 @@
 package helpers
 
+import "container/list"
+
 import "diego/debug"
 import "diego/types"
 
@@ -50,30 +52,47 @@ func FindTransactionById(log *list.List, id int64)*list.Element {
 CreateManagedResolver - makes a managed resolver based on the knowledge of which transactions commute with each other,
                       and which transactions resolve against each other.
 */
-func CreateManagedResolver(makeContext func(ancestorState *types.State)interface{},
-                           commutesWith func(existing, current types.Transaction, context interface{})bool,
-                           resolvesWith func(existing,
-                                             current types.Transaction,
+func CreateManagedResolver(makeContext func(current types.Transaction, ancestorState *types.State)interface{},
+                           updateContext func(current, existing types.Transaction, context interface{}),
+                           commutesWith func(current, existing types.Transaction, context interface{})bool,
+                           resolvesWith func(current,
+                                             existing types.Transaction,
                                              context interface{})(bool, types.Transaction))func(ancestorState *types.State,
                                                                                                 log *list.List,
                                                                                                 current types.Transaction)(bool, types.Transaction) {
-  //oh don't I wish Go had proper multi-line statements
+  // oh don't I wish Go had proper multi-line statements
   return func (ancestorState *types.State, log *list.List,
                current types.Transaction) (bool, types.Transaction) {
-    context := makeContext(ancestorState)
+    context := makeContext(current, ancestorState)
+    var e *list.Element
+
+    if context == nil {
+      // no-context op
+      // can use shortest path through log
+      e = FindTransactionById(log, current.Id())
+    } else {
+      e = log.Front()
+      diff := current.Id() - e.Value.(types.Transaction).Id()
+      for i := int64(1); i < diff; i++ {
+        updateContext(current, e.Value.(types.Transaction), context)
+        e = e.Next()
+      }
+    }
+
     newT := current
     var success bool
     var existing types.Transaction
 
-    for e := FindTransactionById(log, current.Id()); e != nil; e = e.Next() {
+    for ; e != nil; e = e.Next() {
       existing = e.Value.(types.Transaction)
-      if !commutesWith(existing, newT, context) {
-        success, newT = resolvesWith(existing, newT, context)
+      if !commutesWith(newT, existing, context) {
+        success, newT = resolvesWith(newT, existing, context)
         if !success {
           return false, nil
         }
       }
     }
+    newT.SetId(log.Back().Value.(types.Transaction).Id() + 1)
     return true, newT
   }
 }
