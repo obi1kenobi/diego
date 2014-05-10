@@ -15,6 +15,8 @@ class LegoUniverse {
         return _id;
     }
 
+    void CatchupWithServer();
+
     LegoTransactionMgr * GetTransactionMgr() {
         return &_xaMgr;
     }

@@ -4,6 +4,7 @@
 
 #include "LegoApp.h"
 
+#include <QtCore/QTimer>
 #include <QtWidgets/QActionGroup>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QGridLayout>
@@ -14,10 +15,13 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QStackedWidget>
 
+static const int LEGO_POLL_INTERVAL = 200; // ms
+
 LegoMainWindow::LegoMainWindow(QWidget *parent) :
     QMainWindow(parent),
     _ui(new Ui::MainWindow),
-    _app(NULL)
+    _app(NULL),
+    _timer(new QTimer(this))
 {
     // Set up
     _ui->setupUi(this);
@@ -36,6 +40,10 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     connect(_ui->actionDumpScenegraph,
             SIGNAL(triggered(bool)), this,
             SLOT(_DumpScenegraph()));
+
+    // Timer for polling
+    connect(_timer, SIGNAL(timeout()), this, SLOT(_PollServer()));
+    _timer->start(LEGO_POLL_INTERVAL);
 }
 
 LegoMainWindow::~LegoMainWindow()
@@ -114,4 +122,10 @@ LegoMainWindow::_ImportModels()
     }
 
     _app->ImportModels(models);
+}
+
+void
+LegoMainWindow::_PollServer()
+{
+    _app->PollServer();
 }

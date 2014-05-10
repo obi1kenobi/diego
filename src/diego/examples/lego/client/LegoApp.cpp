@@ -514,3 +514,9 @@ LegoApp::ImportModels(const std::vector<std::string> &modelFileNames)
         }
     }
 }
+
+void
+LegoApp::PollServer()
+{
+    _universe->CatchupWithServer();
+}

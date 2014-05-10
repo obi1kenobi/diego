@@ -31,6 +31,12 @@ LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
     _xaMgr.CatchupWithServer();
 }
 
+void
+LegoUniverse::CatchupWithServer()
+{
+    _xaMgr.CatchupWithServer();
+}
+
 bool
 LegoUniverse::ProcessOp(const std::string &opText)
 {
