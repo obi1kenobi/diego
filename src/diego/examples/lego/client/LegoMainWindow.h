@@ -9,6 +9,7 @@ namespace Ui { class MainWindow;}
 
 class LegoApp;
 class QStackedWidget;
+class QTimer;
 
 class LegoMainWindow : public QMainWindow
 {
@@ -22,8 +23,11 @@ class LegoMainWindow : public QMainWindow
     virtual ~LegoMainWindow();
 
   protected slots:
-      void _AddBrick();
-      void _NewOp();
+    void _ImportModels();
+    void _AddBrick();
+    void _NewOp();
+    void _DumpScenegraph();
+    void _PollServer();
 
   private:
     void _Initialize();
@@ -31,6 +35,7 @@ class LegoMainWindow : public QMainWindow
     Ui::MainWindow             *_ui;
     LegoApp                    *_app;
     QStackedWidget             *_stackedViewWidget;
+    QTimer                     *_timer;
 };
 
 #endif // __MAIN_WINDOW_H__

@@ -4,6 +4,7 @@
 
 #include "LegoApp.h"
 
+#include <QtCore/QTimer>
 #include <QtWidgets/QActionGroup>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QGridLayout>
@@ -14,10 +15,13 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QStackedWidget>
 
+static const int LEGO_POLL_INTERVAL = 200; // ms
+
 LegoMainWindow::LegoMainWindow(QWidget *parent) :
     QMainWindow(parent),
     _ui(new Ui::MainWindow),
-    _app(NULL)
+    _app(NULL),
+    _timer(new QTimer(this))
 {
     // Set up
     _ui->setupUi(this);
@@ -30,6 +34,16 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     connect(_ui->opBox, 
             SIGNAL(returnPressed()), this, 
             SLOT(_NewOp()));
+    connect(_ui->actionImportModels,
+            SIGNAL(triggered(bool)), this,
+            SLOT(_ImportModels()));
+    connect(_ui->actionDumpScenegraph,
+            SIGNAL(triggered(bool)), this,
+            SLOT(_DumpScenegraph()));
+
+    // Timer for polling
+    connect(_timer, SIGNAL(timeout()), this, SLOT(_PollServer()));
+    _timer->start(LEGO_POLL_INTERVAL);
 }
 
 LegoMainWindow::~LegoMainWindow()
@@ -53,6 +67,18 @@ LegoMainWindow::_Initialize()
     for (auto *viewerWidget : viewerWidgets) {
         _stackedViewWidget->addWidget(viewerWidget);
     }
+
+    // Display transaction log from server
+    const auto &xaLog = _app->GetTransactionLog();
+    for (const auto &xa : xaLog) {
+        const auto &ops = xa.GetOps();
+        for (const auto op : ops) {
+            std::ostringstream os;
+            op.Serialize(os);
+            _ui->logTextEdit->moveCursor(QTextCursor::End);
+            _ui->logTextEdit->insertPlainText(os.str().c_str());
+        }
+    }
 }
 
 void
@@ -69,4 +95,37 @@ LegoMainWindow::_NewOp()
         _ui->logTextEdit->appendPlainText(op.c_str());
     }
     _ui->opBox->clear();
+}
+
+void
+LegoMainWindow::_DumpScenegraph()
+{
+    _app->DumpScenegraph();
+}
+
+void
+LegoMainWindow::_ImportModels()
+{
+    QStringList paths = 
+        QFileDialog::getOpenFileNames(this, 
+                                     tr("Import Models"), 
+                                     ".", 
+                                     tr("Models (*.stl)"));
+    std::vector<std::string> models;
+    QStringList pathList = paths;
+    for (QStringList::Iterator it = pathList.begin(); it != pathList.end(); ++it) {
+        models.push_back(it->toStdString());
+    }
+
+    if (models.empty()) {
+        return;
+    }
+
+    _app->ImportModels(models);
+}
+
+void
+LegoMainWindow::_PollServer()
+{
+    _app->PollServer();
 }

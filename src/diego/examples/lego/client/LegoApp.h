@@ -1,6 +1,7 @@
 #ifndef __LEGO_APP_H__
 #define __LEGO_APP_H__
 
+#include "LegoTransaction.h"
 #include "NoticeMgr.h"
 #include "Vec3d.h"
 
@@ -26,13 +27,21 @@ class LegoApp {
 
     ~LegoApp();
 
-    bool ProcessOp(const std::string &op);
-
     void InitializeViewers(QWidget *, QWidget *parentWidget);
 
     const std::vector<QWidget*> & GetViewerWidgets() const {
         return _viewerWidgets;
     }
+
+    bool ProcessOp(const std::string &op);
+
+    void ImportModels(const std::vector<std::string> &modelFileNames);
+
+    const std::vector<LegoTransaction> & GetTransactionLog();
+
+    void PollServer();
+
+    void DumpScenegraph();
 
   private:
     struct _CallbackData {
@@ -43,7 +52,10 @@ class LegoApp {
     void _CreateUniverse();
 
     void _CreateScene();
+
     SoSeparator * _CreatePlatformBed();
+
+    void _BuildBricks();
 
     static void _BeginRenderSceneCB(void *userData, SoAction *action);
 
@@ -58,9 +70,16 @@ class LegoApp {
     void _AddBrick(LegoBrick *brick,
                    uint32_t brickIndex,
                    SbVec3f *coords,
-                   int32_t *indices);
+                   SbVec3f *colors,
+                   int32_t *indices,
+                   int32_t *matIndices,
+                   int32_t *texIndices);
 
     std::vector<SfNoticeMgr::Key> _noticeKeys;
+
+    MfVec3i                     _worldSize;
+    MfVec3i                     _worldMin;
+    MfVec3i                     _worldMax;
 
     MfVec3d                     _bedSize;
     LegoMainWindow             *_mainWindow;
@@ -84,6 +103,8 @@ class LegoApp {
     SoSwitch                   *_previewEnvSwitch;
     SoDrawStyle                *_sceneDrawStyle;
     SoCoordinate3              *_brickCoords;
+    SoMaterial                 *_brickMaterial;
+    SoTextureCoordinate2       *_brickTexCoords;
     SoIndexedFaceSet           *_brickIFS;
 };
 

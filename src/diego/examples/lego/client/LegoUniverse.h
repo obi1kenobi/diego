@@ -15,6 +15,8 @@ class LegoUniverse {
         return _id;
     }
 
+    void CatchupWithServer();
+
     LegoTransactionMgr * GetTransactionMgr() {
         return &_xaMgr;
     }
@@ -53,18 +55,26 @@ class LegoUniverse {
     }
 
     inline size_t _GetIndex(const MfVec3i &pos) const {
-        if (pos[0] < 0 || pos[0] >= _gridSize[0] ||
-            pos[1] < 0 || pos[1] >= _gridSize[1] ||
-            pos[2] < 0 || pos[2] >= _gridSize[2]) {
+        if (pos[0] < _gridMin[0] || pos[0] > _gridMax[0] ||
+            pos[1] < _gridMin[1] || pos[1] > _gridMax[1] ||
+            pos[2] < _gridMin[2] || pos[2] > _gridMax[2]) {
             return size_t(-1);
         } else {
-            return pos[2] * _XY + pos[1] * _gridSize[0] + pos[0];
+            int x = pos[0] - _gridMin[0];
+            int y = pos[1] - _gridMin[1];
+            int z = pos[2] - _gridMin[2];
+            return z * _XY + y * _gridSize[0] + x;
         }
     }
 
+    bool _IsValid(const LegoOp &op);
+
     uint64_t _id;
     LegoTransactionMgr _xaMgr;
+    LegoTransaction *_xa;
     MfVec3i _gridSize;
+    MfVec3i _gridMin;
+    MfVec3i _gridMax;
     size_t _XY;
     std::vector<LegoBrick*> _bricks;
     _BrickMap _brickMap;

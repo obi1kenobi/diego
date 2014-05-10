@@ -24,7 +24,7 @@ func main() {
 }
 
 func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
-  debug.DPrintf(0, "Begin callback")
+  debug.DPrintf(2, "Begin callback")
 
   b, err := ioutil.ReadAll(r.Body)
   debug.EnsureNoError(err)
@@ -35,7 +35,7 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
 
   buf := bytes.NewBuffer(b)
 
-  debug.DPrintf(0, "Got message: %v\n", buf)
+  debug.DPrintf(1, "Got message: %v\n", buf)
 
   command, err := buf.ReadString('\n')
   debug.EnsureNoError(err)
@@ -52,6 +52,8 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
     ns, id := server.DeserializeTransactionsSince(buf)
     xas, _ := dc.TransactionsSinceId(ns, id)
     server.SerializeTransactionSlice(ns, xas, resultBuf)
+    _, err = resultBuf.WriteTo(w)
+    debug.EnsureNoError(err)
   default:
     fmt.Printf("ERROR: Unrecognized command: '%s'", command)
   }
@@ -59,5 +61,5 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
   _, err = resultBuf.WriteTo(w)
   debug.EnsureNoError(err)
 
-  debug.DPrintf(0, "End callback\n")
+  debug.DPrintf(2, "End callback\n")
 }
