@@ -3,13 +3,18 @@
 #include "LegoNotices.h"
 #include "LegoTransactionMgr.h"
 #include "LegoUniverse.h"
+#include "LegoVoxelizer.h"
+#include "STLReader.h"
 
 #include <cassert>
 
 LegoApp::LegoApp(LegoMainWindow *mainWindow) :
     _mainWindow(mainWindow),
     _universe(NULL),
-    _bedSize(64, 38, 1),
+    _worldSize(64, 64, 64),
+    _worldMin(-31, -31, 0),
+    _worldMax(32, 32, 63),
+    _bedSize(_worldSize[0], _worldSize[1], 1),
     _sceneRoot(NULL),
     _platformRoot(NULL)
 {
@@ -87,8 +92,7 @@ LegoApp::InitializeViewers(QWidget *, QWidget *parentWidget)
 void
 LegoApp::_CreateUniverse()
 {
-    MfVec3i gridSize(100);
-    _universe = new LegoUniverse(gridSize);
+    _universe = new LegoUniverse(_worldSize);
 }
 
 void
@@ -496,4 +500,17 @@ LegoApp::DumpScenegraph()
 {
     SoWriteAction wa;
     wa.apply(_sceneRoot);
+}
+
+void
+LegoApp::ImportModels(const std::vector<std::string> &modelFileNames)
+{
+    for (const auto &modelPath : modelFileNames) {
+        GfSTLReader stlReader;
+        GfTriangleMesh *mesh = stlReader.Read(modelPath);
+        if (mesh) {
+            LegoVoxelizer voxelizer(_universe);
+            voxelizer.Voxelize(mesh, 64, _worldMin);
+        }
+    }
 }

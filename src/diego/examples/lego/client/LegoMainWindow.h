@@ -22,9 +22,10 @@ class LegoMainWindow : public QMainWindow
     virtual ~LegoMainWindow();
 
   protected slots:
-      void _AddBrick();
-      void _NewOp();
-      void _DumpScenegraph();
+    void _ImportModels();
+    void _AddBrick();
+    void _NewOp();
+    void _DumpScenegraph();
 
   private:
     void _Initialize();
