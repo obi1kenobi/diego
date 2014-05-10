@@ -8,7 +8,7 @@ static int _level = 0;
 int
 SfDPrintf(int level, const char *fmt, ...)
 {
-    if (level >= _level) {
+    if (level <= _level) {
         va_list args;
         va_start(args, fmt);
         int result = vfprintf(stderr, fmt, args);

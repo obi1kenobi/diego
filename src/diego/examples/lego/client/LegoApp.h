@@ -27,13 +27,15 @@ class LegoApp {
 
     ~LegoApp();
 
-    bool ProcessOp(const std::string &op);
-
     void InitializeViewers(QWidget *, QWidget *parentWidget);
 
     const std::vector<QWidget*> & GetViewerWidgets() const {
         return _viewerWidgets;
     }
+
+    bool ProcessOp(const std::string &op);
+
+    void ImportModels(const std::vector<std::string> &modelFileNames);
 
     const std::vector<LegoTransaction> & GetTransactionLog();
 
@@ -72,6 +74,10 @@ class LegoApp {
                    int32_t *texIndices);
 
     std::vector<SfNoticeMgr::Key> _noticeKeys;
+
+    MfVec3i                     _worldSize;
+    MfVec3i                     _worldMin;
+    MfVec3i                     _worldMax;
 
     MfVec3d                     _bedSize;
     LegoMainWindow             *_mainWindow;

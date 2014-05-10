@@ -30,6 +30,9 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     connect(_ui->opBox, 
             SIGNAL(returnPressed()), this, 
             SLOT(_NewOp()));
+    connect(_ui->actionImportModels,
+            SIGNAL(triggered(bool)), this,
+            SLOT(_ImportModels()));
     connect(_ui->actionDumpScenegraph,
             SIGNAL(triggered(bool)), this,
             SLOT(_DumpScenegraph()));
@@ -90,4 +93,25 @@ void
 LegoMainWindow::_DumpScenegraph()
 {
     _app->DumpScenegraph();
+}
+
+void
+LegoMainWindow::_ImportModels()
+{
+    QStringList paths = 
+        QFileDialog::getOpenFileNames(this, 
+                                     tr("Import Models"), 
+                                     ".", 
+                                     tr("Models (*.stl)"));
+    std::vector<std::string> models;
+    QStringList pathList = paths;
+    for (QStringList::Iterator it = pathList.begin(); it != pathList.end(); ++it) {
+        models.push_back(it->toStdString());
+    }
+
+    if (models.empty()) {
+        return;
+    }
+
+    _app->ImportModels(models);
 }

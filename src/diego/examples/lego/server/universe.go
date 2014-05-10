@@ -3,9 +3,9 @@ package server
 import "diego/debug"
 import "fmt"
 
-var legoGridSize = []int32 { 64, 38, 64 }
-var legoGridMin = []int32 { -31, -18, 0 }
-var legoGridMax = []int32 { 32, 19, 63 }
+var legoGridSize = []int32 { 64, 64, 64 }
+var legoGridMin = []int32 { -31, -31, 0 }
+var legoGridMax = []int32 { 32, 32, 63 }
 
 type LegoUniverse struct {
   id int64
@@ -92,10 +92,12 @@ func (universe *LegoUniverse) GetBrick(id int64) (*LegoBrick, bool) {
 }
 
 func (universe *LegoUniverse) displayLevel(level int) {
-  for y := legoGridSize[1] - 1; y >= int32(0); y-- {
-    for x := int32(0); x < legoGridSize[0]; x++ {
-      fmt.Printf("%02d ", universe.grid[x][y][level])
+  if false {
+    for y := legoGridSize[1] - 1; y >= int32(0); y-- {
+      for x := int32(0); x < legoGridSize[0]; x++ {
+        fmt.Printf("%02d ", universe.grid[x][y][level])
+      }
+      fmt.Printf("\n")
     }
-    fmt.Printf("\n")
   }
 }
