@@ -45,7 +45,6 @@ func CreateResolver(makeState func()types.State, trailingDistance int, durablePa
 
     // apply any transaction that exist in the log
     transactionProcessor := func(t types.Transaction) {
-      debug.DPrintf(2, "reading transaction...")
       rs.submitTransactionLockless(t, false)
     }
     rs.durableLogger.ReadAll(transactionProcessor)

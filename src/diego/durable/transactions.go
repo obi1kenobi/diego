@@ -339,8 +339,6 @@ func tryLoadExistingWriter(tl *TransactionLogger) {
     return
   }
 
-  debug.DPrintf(2, "Found old data, reading...")
-
   // verify file names and memoize data/index files
   for _, n := range names {
     sp := strings.SplitN(n, ".", 2)
