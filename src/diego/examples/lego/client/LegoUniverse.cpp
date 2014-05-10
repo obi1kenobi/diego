@@ -3,6 +3,8 @@
 #include "LegoOps.h"
 #include "LegoTransaction.h"
 
+#include <iostream>
+
 LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
     _id(0),
     _xaMgr(this),
@@ -11,6 +13,20 @@ LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
     _grid(gridSize[0] * gridSize[1] * gridSize[2], 0),
     _brickID(0)
 {
+    _gridMin[0] = -_gridSize[0] / 2;
+    if (_gridSize[0] % 2 == 0) {
+        ++_gridMin[0];
+    }
+    _gridMin[1] = -_gridSize[0] / 2;
+    if (_gridSize[0] % 2 == 1) {
+        ++_gridMin[1];
+    }
+    _gridMin[2] = 0;
+
+    _gridMax[0] = _gridSize[0] / 2;
+    _gridMax[1] = _gridSize[0] / 2;
+    _gridMax[2] = _gridSize[2] - 1;
+
     _xaMgr.CatchupWithServer();
 }
 
@@ -20,12 +36,41 @@ LegoUniverse::ProcessOp(const std::string &opText)
     std::istringstream ops(opText);
     LegoOp op(ops);
     if (!op.IsValid()) {
+        std::cerr << "Invalid op\n";
+        return false;
+    }
+    if (!_IsValid(op)) {
+        std::cerr << "Invalid op\n";
         return false;
     }
     LegoTransaction xa;
     xa.AddOp(op);
     bool success = _xaMgr.Execute(xa);
     return success;
+}
+
+bool
+LegoUniverse::_IsValid(const LegoOp &op)
+{
+    LegoOp::Type opType = op.GetType();
+    if (opType == LegoOp::CREATE_BRICK || 
+        opType == LegoOp::MODIFY_BRICK_POSITION || 
+        opType == LegoOp::MODIFY_BRICK_SIZE) {
+        const MfVec3i &pos = op.GetPosition();
+        const MfVec3i &size = op.GetSize();
+        for (int i = 0; i < 3; ++i) {
+            if (pos[i] < _gridMin[i]) {
+                return false;
+            }
+            if (pos[i] > _gridMax[i]) {
+                return false;
+            }
+            if (pos[i] + size[i] > _gridMax[i]) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 bool

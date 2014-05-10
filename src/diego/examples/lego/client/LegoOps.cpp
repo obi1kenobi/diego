@@ -1,6 +1,5 @@
 #include "LegoOps.h"
 
-#include <iostream>
 #include <exception>
 
 #include <assert.h>
@@ -17,27 +16,26 @@ LegoOp::LegoOp(std::istream &is)
         is >> _size;
         is >> _orientation;
         is >> _color;
-    } else if (type == "ModifyPosition") {
-        _type = MODIFY_POSITION;
+    } else if (type == "ModifyBrickPosition") {
+        _type = MODIFY_BRICK_POSITION;
         is >> _brickID;
         is >> _position;
-    } else if (type == "ModifySize") {
-        _type = MODIFY_SIZE;
+    } else if (type == "ModifyBrickSize") {
+        _type = MODIFY_BRICK_SIZE;
         is >> _brickID;
         is >> _size;
-    } else if (type == "ModifyOrientation") {
-        _type = MODIFY_ORIENTATION;
+    } else if (type == "ModifyBrickOrientation") {
+        _type = MODIFY_BRICK_ORIENTATION;
         is >> _brickID;
         is >> _orientation;
-    } else if (type == "ModifyColor") {
-        _type = MODIFY_COLOR;
+    } else if (type == "ModifyBrickColor") {
+        _type = MODIFY_BRICK_COLOR;
         is >> _brickID;
         is >> _color;
     } else if (type == "DeleteBrick") {
         _type = DELETE_BRICK;
         is >> _brickID;
     } else {
-        std::cerr << "Invalid op\n";
         _valid = false;
     }
 }
@@ -57,43 +55,43 @@ LegoOp::MakeCreateOp(const MfVec3i &position,
 }
 
 LegoOp
-LegoOp::MakeModifyPositionOp(uint64_t brickID, const MfVec3i &position)
+LegoOp::MakeModifyBrickPositionOp(int64_t brickID, const MfVec3i &position)
 {
-    LegoOp op(MODIFY_POSITION);
+    LegoOp op(MODIFY_BRICK_POSITION);
     op._brickID = brickID;
     op._position = position;
     return op;
 }
 
 LegoOp
-LegoOp::MakeModifySizeOp(uint64_t brickID, const MfVec3i &size)
+LegoOp::MakeModifyBrickSizeOp(int64_t brickID, const MfVec3i &size)
 {
-    LegoOp op(MODIFY_SIZE);
+    LegoOp op(MODIFY_BRICK_SIZE);
     op._brickID = brickID;
     op._size = size;
     return op;
 }
 
 LegoOp
-LegoOp::MakeModifyColorOp(uint64_t brickID, const MfVec3f &color)
+LegoOp::MakeModifyBrickColorOp(int64_t brickID, const MfVec3f &color)
 {
-    LegoOp op(MODIFY_COLOR);
+    LegoOp op(MODIFY_BRICK_COLOR);
     op._brickID = brickID;
     op._color = color;
     return op;
 }
 
 LegoOp
-LegoOp::MakeModifyOrientationOp(uint64_t brickID, LegoBrick::Orientation orientation)
+LegoOp::MakeModifyBrickOrientationOp(int64_t brickID, LegoBrick::Orientation orientation)
 {
-    LegoOp op(MODIFY_ORIENTATION);
+    LegoOp op(MODIFY_BRICK_ORIENTATION);
     op._brickID = brickID;
     op._orientation = orientation;
     return op;
 }
 
 LegoOp
-LegoOp::MakeDeleteBrickOp(uint64_t brickID)
+LegoOp::MakeDeleteBrickOp(int64_t brickID)
 {
     LegoOp op(DELETE_BRICK);
     op._brickID = brickID;
@@ -112,26 +110,26 @@ LegoOp::Serialize(std::ostream &os) const
         os << " " << _color;
         os << std::endl;
     } break;
-    case MODIFY_POSITION: {
-        os << "ModifyPosition"; 
+    case MODIFY_BRICK_POSITION: {
+        os << "ModifyBrickPosition"; 
         os << " " << _brickID;
         os << " " << _position;
         os << std::endl;
     } break;
-    case MODIFY_SIZE: {
-        os << "ModifySize"; 
+    case MODIFY_BRICK_SIZE: {
+        os << "ModifyBrickSize"; 
         os << " " << _brickID;
         os << " " << _size;
         os << std::endl;
     } break;
-    case MODIFY_ORIENTATION: {
-        os << "ModifyOrientation"; 
+    case MODIFY_BRICK_ORIENTATION: {
+        os << "ModifyBrickOrientation"; 
         os << " " << _brickID;
         os << " " << _orientation;
         os << std::endl;
     } break;
-    case MODIFY_COLOR: {
-        os << "ModifyColor"; 
+    case MODIFY_BRICK_COLOR: {
+        os << "ModifyBrickColor"; 
         os << " " << _brickID;
         os << " " << _color;
         os << std::endl;

@@ -7,7 +7,7 @@
 #include <vector>
 
 LegoBrick::LegoBrick(LegoUniverse *universe,
-                     uint64_t id,
+                     int64_t id,
                      const MfVec3i &position,
                      const MfVec3i &size,
                      Orientation orientation,
@@ -39,7 +39,7 @@ bool
 LegoBrick::SetPosition(const MfVec3i &position)
 {
     LegoTransaction xa;
-    xa.AddOp(LegoOp::MakeModifyPositionOp(GetID(), position));
+    xa.AddOp(LegoOp::MakeModifyBrickPositionOp(GetID(), position));
     bool success = _xaMgr->Execute(xa);
     return success;
 }
@@ -48,7 +48,7 @@ bool
 LegoBrick::SetSize(const MfVec3i &size)
 {
     LegoTransaction xa;
-    xa.AddOp(LegoOp::MakeModifySizeOp(GetID(), size));
+    xa.AddOp(LegoOp::MakeModifyBrickSizeOp(GetID(), size));
     bool success = _xaMgr->Execute(xa);
     return success;
 }
@@ -57,7 +57,7 @@ bool
 LegoBrick::SetOrientation(Orientation orientation)
 {
     LegoTransaction xa;
-    xa.AddOp(LegoOp::MakeModifyOrientationOp(GetID(), orientation));
+    xa.AddOp(LegoOp::MakeModifyBrickOrientationOp(GetID(), orientation));
     bool success = _xaMgr->Execute(xa);
     return success;
 }
@@ -66,7 +66,7 @@ bool
 LegoBrick::SetColor(const MfVec3f &color)
 {
     LegoTransaction xa;
-    xa.AddOp(LegoOp::MakeModifyColorOp(GetID(), color));
+    xa.AddOp(LegoOp::MakeModifyBrickColorOp(GetID(), color));
     bool success = _xaMgr->Execute(xa);
     return success;
 }
