@@ -41,20 +41,20 @@ func getGridIndex(position Vec3i) (int32, int32, int32) {
 }
 
 func (universe *LegoUniverse) insertBrick(brick *LegoBrick) {
-  universe.bricks[brick.id] = brick
-  universe.writeBrick(brick.id, brick.position, brick.size)
+  universe.bricks[brick.Bid] = brick
+  universe.writeBrick(brick.Bid, brick.Position, brick.Size)
 }
 
 func (universe *LegoUniverse) moveBrick(brick *LegoBrick, newPosition Vec3i) {
   validateBrickPosition(newPosition)
-  universe.writeBrick(0, brick.position, brick.size)
-  brick.position = newPosition
-  universe.writeBrick(brick.id, brick.position, brick.size)
+  universe.writeBrick(0, brick.Position, brick.Size)
+  brick.Position = newPosition
+  universe.writeBrick(brick.Bid, brick.Position, brick.Size)
 }
 
 func (universe *LegoUniverse) deleteBrick(brick *LegoBrick) {
-  universe.writeBrick(0, brick.position, brick.size)
-  delete(universe.bricks, brick.id)
+  universe.writeBrick(0, brick.Position, brick.Size)
+  delete(universe.bricks, brick.Bid)
   universe.numBricks--
 }
 

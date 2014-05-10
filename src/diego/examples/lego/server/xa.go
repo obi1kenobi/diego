@@ -7,23 +7,23 @@ import "diego/types"
 
 // Transactions
 type LegoTransaction struct {
-  id int64
-  ops []*LegoOp
+  Tid int64
+  Ops []*LegoOp
 }
 
 func (xa *LegoTransaction) SetId(id int64) {
-  xa.id = id
+  xa.Tid = id
 }
 
 func (xa *LegoTransaction) Id() int64 {
-  return xa.id
+  return xa.Tid
 }
 
 func SerializeTransaction(ns string, xa *LegoTransaction, b *bytes.Buffer) {
   b.WriteString(ns)
-  serializeInt64(xa.id, b)
+  serializeInt64(xa.Tid, b)
   b.WriteByte('\n')
-  for _, op := range xa.ops {
+  for _, op := range xa.Ops {
     op.serialize(b)
   }
   b.WriteByte(legoTerminator)
@@ -37,7 +37,7 @@ func DeserializeTransaction(b *bytes.Buffer) (string, *LegoTransaction) {
   debug.EnsureNoError(err)
   val, err := b.ReadString('\n')
   debug.EnsureNoError(err)
-  xa.id, err = strconv.ParseInt(val[:len(val)-1], 10, 64)
+  xa.Tid, err = strconv.ParseInt(val[:len(val)-1], 10, 64)
   debug.EnsureNoError(err)
 
   for {
@@ -53,7 +53,7 @@ func DeserializeTransaction(b *bytes.Buffer) (string, *LegoTransaction) {
 
     op := new(LegoOp)
     op.deserialize(btemp)
-    xa.ops = append(xa.ops, op)
+    xa.Ops = append(xa.Ops, op)
   }
 }
 

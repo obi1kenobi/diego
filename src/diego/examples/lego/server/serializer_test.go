@@ -18,11 +18,11 @@ func TestSerializeCreateOp(t *testing.T) {
     t.Errorf("expected ns=%s got resNs=%s", ns, resNs)
   }
 
-  if len(xa.ops) != len(resXa.ops) {
-    t.Errorf("expected len(xa.ops)=%d got len(resXa.ops)=%d", len(xa.ops), len(resXa.ops))
+  if len(xa.Ops) != len(resXa.Ops) {
+    t.Errorf("expected len(xa.ops)=%d got len(resXa.ops)=%d", len(xa.Ops), len(resXa.Ops))
   }
 
-  resOp := resXa.ops[0]
+  resOp := resXa.Ops[0]
   if !op.Position.Equal(resOp.Position) {
     t.Errorf("positions not equal: %v vs %v", op, resOp)
   }
