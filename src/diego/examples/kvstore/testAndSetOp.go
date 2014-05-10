@@ -13,7 +13,6 @@ type testAndSetOp struct {
 func (op *testAndSetOp) Execute(s types.State)types.Transaction {
   kv := s.(*kvStore)
   kv.data[op.Key] = op.Value
-  op.Tid = kv.id
   return op
 }
 
