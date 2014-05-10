@@ -25,8 +25,9 @@ func (op *testAndSetOp) MakeContext(ancestor types.State) interface{} {
   return nil
 }
 
-func (op *testAndSetOp) UpdateContext(existing types.Transaction, context interface{}) {
+func (op *testAndSetOp) UpdateContext(existing types.Transaction, context interface{}) bool {
   debug.Assert(false, "UpdateContext called on testAndSetOp")
+  return true
 }
 
 func (op *testAndSetOp) CommutesWith(t types.Transaction, context interface{}) bool {
@@ -42,6 +43,8 @@ func (op *testAndSetOp) CommutesWith(t types.Transaction, context interface{}) b
     return x.Key != op.Key
   case *flipflopAddOp:
     return x.Key != op.Key
+  case *concatValuesOp:
+    return x.ResultKey != op.Key
   default:
     debug.Assert(false, "Unknown transaction type %+v", t)
   }

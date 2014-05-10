@@ -17,16 +17,16 @@ func (op *pessimisticSetOp) Execute(s types.State)types.Transaction {
 }
 
 func (op *pessimisticSetOp) CheckedApply(s types.State) (bool, types.Transaction) {
-  success, newT := helpers.ApplyIfUpToDate(s, op, applierForExecutable)
-  return success, newT
+  return helpers.ApplyIfUpToDate(s, op, applierForExecutable)
 }
 
 func (op *pessimisticSetOp) MakeContext(ancestor types.State) interface{} {
   return nil
 }
 
-func (op *pessimisticSetOp) UpdateContext(existing types.Transaction, context interface{}) {
+func (op *pessimisticSetOp) UpdateContext(existing types.Transaction, context interface{}) bool {
   debug.Assert(false, "UpdateContext called on pessimisticSetOp")
+  return true
 }
 
 func (op *pessimisticSetOp) CommutesWith(t types.Transaction, context interface{}) bool {

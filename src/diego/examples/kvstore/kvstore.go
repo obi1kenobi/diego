@@ -21,7 +21,7 @@ type kvExecutable interface {
 
   MakeContext(ancestor types.State) interface{}
 
-  UpdateContext(existing types.Transaction, context interface{})
+  UpdateContext(existing types.Transaction, context interface{}) bool
 
   CommutesWith(t types.Transaction, context interface{}) bool
 
@@ -38,8 +38,8 @@ func makeContextForExecutable(current types.Transaction,
 }
 
 func updateContextForExecutable(current, existing types.Transaction,
-                                context interface{}) {
-  current.(kvExecutable).UpdateContext(existing, context)
+                                context interface{})bool {
+  return current.(kvExecutable).UpdateContext(existing, context)
 }
 
 func commutesWithForExecutable(current, existing types.Transaction,
