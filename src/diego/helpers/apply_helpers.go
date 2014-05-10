@@ -21,7 +21,9 @@ func ApplyIfSafe(s types.State, t types.Transaction,
                  isSafe func(types.State, types.Transaction)bool,
                  applier func(types.State, types.Transaction)types.Transaction) (bool, types.Transaction) {
   if isSafe(s, t) {
-    return true, applier(s, t)
+    newT := applier(s, t)
+    newT.SetId(s.Id())
+    return true, newT
   }
   return false, nil
 }
