@@ -1,6 +1,7 @@
 package kvstore
 
 import "os"
+import "time"
 import "strconv"
 import "testing"
 
@@ -16,7 +17,12 @@ func recentTransactionBench(trailingDist int, b *testing.B) {
 func durableRecentTransactionBench(trailingDist int, b *testing.B) {
   const basePath = "../../../../_test/bench_durable/"
   path := basePath + "recent_" + strconv.Itoa(trailingDist)
-  os.RemoveAll(basePath)
+
+  err := os.RemoveAll(basePath)
+  for err != nil {
+    time.Sleep(50 * time.Millisecond)
+    err = os.RemoveAll(basePath)
+  }
 
   rs := resolver.CreateResolver(makeState, trailingDist, path)
   recentTransactionHarness(rs, b)
@@ -52,7 +58,12 @@ func fullLogReadBench(trailingDist int, b *testing.B) {
 func durableFullLogReadBench(trailingDist int, b *testing.B) {
   const basePath = "../../../../_test/bench_durable/"
   path := basePath + "full_" + strconv.Itoa(trailingDist)
-  os.RemoveAll(basePath)
+
+  err := os.RemoveAll(basePath)
+  for err != nil {
+    time.Sleep(50 * time.Millisecond)
+    err = os.RemoveAll(basePath)
+  }
 
   rs := resolver.CreateResolver(makeState, trailingDist, path)
   fullLogReadHarness(rs, trailingDist, b)
