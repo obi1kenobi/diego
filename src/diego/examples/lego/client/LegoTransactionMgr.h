@@ -13,7 +13,13 @@ class LegoTransactionMgr {
   public:
     LegoTransactionMgr(LegoUniverse *universe);
 
-    bool Execute(const LegoTransaction &xa);
+    void OpenTransaction();
+
+    void CloseTransaction();
+
+    bool ExecuteOp(const LegoOp &op);
+
+    bool ExecuteXa(const LegoTransaction &xa);
 
     void CatchupWithServer();
 
@@ -34,6 +40,7 @@ class LegoTransactionMgr {
     LegoUniverse *_universe;
     uint64_t _xaIds;
     std::vector<LegoTransaction> _xas;
+    LegoTransaction *_xa;
 };
 
 #endif //  LEGO_TRANSACTION_MGR_H

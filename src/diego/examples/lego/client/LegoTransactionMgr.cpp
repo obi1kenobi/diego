@@ -18,12 +18,42 @@
 
 LegoTransactionMgr::LegoTransactionMgr(LegoUniverse *universe) : 
     _universe(universe),
-    _xaIds(0)
+    _xaIds(0),
+    _xa(NULL)
 {
 }
 
+void
+LegoTransactionMgr::OpenTransaction()
+{
+    assert(_xa == NULL);
+    _xa = new LegoTransaction();
+}
+
+void
+LegoTransactionMgr::CloseTransaction()
+{
+    assert(_xa != NULL);
+    ExecuteXa(*_xa);
+    delete _xa;
+    _xa = NULL;
+}
+
 bool
-LegoTransactionMgr::Execute(const LegoTransaction &xa)
+LegoTransactionMgr::ExecuteOp(const LegoOp &op)
+{
+    if (_xa) {
+        _xa->AddOp(op);
+        return true;
+    } else {
+        LegoTransaction xa;
+        xa.AddOp(op);
+        return ExecuteXa(xa);
+    }
+}
+
+bool
+LegoTransactionMgr::ExecuteXa(const LegoTransaction &xa)
 {
     // Send transaction to server
     std::string response = _SendToServer(xa);
