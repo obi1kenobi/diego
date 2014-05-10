@@ -11,7 +11,7 @@ const trailingDistance = 50
 const randomKeyspaceSize = 25
 
 func setup()(*resolver.Resolver, *kvStore, func() types.RequestToken) {
-  return makeResolver(), makeState().(*kvStore), tests.MakeRequestTokenGenerator(0)
+  return makeResolver(), makeState().(*kvStore), types.MakeRequestTokenGenerator(0)
 }
 
 func makeResolver()*resolver.Resolver {
@@ -62,7 +62,7 @@ func generateRandomAppend(rnd *rand.Rand, tok types.RequestToken)(types.Transact
 }
 
 func makeTestData(data []tests.TestDataItem, rnd *rand.Rand) {
-  nt := tests.MakeRequestTokenGenerator(0)
+  nt := types.MakeRequestTokenGenerator(0)
   fns := []func(*rand.Rand, types.RequestToken)(types.Transaction, tests.TransactionResult) { generateRandomLwwSet,
                                                                              generateRandomPessimisticSet,
                                                                              generateRandomAppend,

@@ -22,7 +22,7 @@ type Resolver struct {
   transactionIdLookup map[int64]*list.Element
   trailingDistance int
   durableLogger *durable.TransactionLogger
-  requestTokens map[types.RequestToken]bool
+  requestTokens map[types.RequestToken]*list.Element
   closed bool
 }
 
@@ -40,7 +40,7 @@ func CreateResolver(makeState func()types.State, trailingDistance int, durablePa
   rs.trailingDistance = trailingDistance
   rs.log = new(list.List)
   rs.transactionIdLookup = make(map[int64]*list.Element)
-  rs.requestTokens = make(map[types.RequestToken]bool)
+  rs.requestTokens = make(map[types.RequestToken]*list.Element)
 
   if durablePath != "" {
     rs.durableLogger = durable.CreateTransactionLogger(durablePath)
@@ -84,7 +84,7 @@ func (rs *Resolver) appendTransaction(t types.Transaction) {
 
   rs.log.PushBack(t)
   rs.transactionIdLookup[t.Id()] = rs.log.Back()
-  rs.requestTokens[t.GetToken()] = true
+  rs.requestTokens[t.GetToken()] = rs.log.Back()
 }
 
 func assertRecentTransaction(s *types.State, t types.Transaction) {
@@ -207,9 +207,9 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.
   Ensure at-most-once semantics: If the token provided by the transaction is the same as
   a transaction in the log, fail the transaction.
   */
-  if _, exists := rs.requestTokens[t.GetToken()]; exists {
+  if oldT, exists := rs.requestTokens[t.GetToken()]; exists {
     debug.DPrintf(1, "Got duplicate request %v", t)
-    return false, nil
+    return true, oldT.Value.(types.Transaction)
   }
 
   /*

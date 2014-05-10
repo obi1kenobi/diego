@@ -22,9 +22,15 @@ Failure - we expect the transaction to fail
 const Failure TransactionResult = -1
 
 /*
+Stale - we expect the transaction to return an old transaction
+*/
+const Stale TransactionResult = 2
+
+/*
 NoCheck - we don't know whether the transaction will succeed or not
 */
 const NoCheck TransactionResult = 0
+
 
 /*
 TestDataItem -
@@ -104,6 +110,22 @@ func expectSubmitFailure(t *testing.T, rs *resolver.Resolver,
   return true
 }
 
+func expectSubmitStale(t *testing.T, rs *resolver.Resolver,
+                       op types.Transaction, s types.State) bool {
+  success := true
+  ok, newT := rs.SubmitTransaction(op)
+  if !ok {
+    t.Errorf("Transaction %s failed to apply on server", debug.Stringify(op))
+    success = false
+  }
+  ok, _ = s.Apply(newT)
+  if ok {
+    t.Errorf("Transaction response %s should have failed to apply locally", debug.Stringify(newT))
+    success = false
+  }
+  return success
+}
+
 func handleSubmit(t *testing.T, rs *resolver.Resolver,
                   op types.Transaction, s types.State) bool {
   ok, newT := rs.SubmitTransaction(op)
@@ -126,6 +148,8 @@ func expectSubmitResult(t *testing.T, rs *resolver.Resolver,
     return expectSubmitSuccess(t, rs, op, s)
   case Failure:
     return expectSubmitFailure(t, rs, op)
+  case Stale:
+    return expectSubmitStale(t, rs, op, s)
   default:
     return handleSubmit(t, rs, op, s)
   }
@@ -153,16 +177,4 @@ func expectNoNewTransactions(t *testing.T, rs *resolver.Resolver, expid int64) b
     success = false
   }
   return success
-}
-
-/*
-MakeRequestTokenGenerator - quick and dirty way of generating unique request tokens
-for testing purposes. Not thread safe.
-*/
-func MakeRequestTokenGenerator(clientId int64) func()types.RequestToken {
-  reqId := int64(0)
-  return func() types.RequestToken {
-    reqId++
-    return types.RequestToken{ClientId: clientId, ReqId: reqId}
-  }
 }

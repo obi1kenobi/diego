@@ -8,7 +8,6 @@ import "diego/types"
 type kvStore struct {
   data map[string]string
   id int64
-  token types.RequestToken
 }
 
 // last-writer-wins set op
