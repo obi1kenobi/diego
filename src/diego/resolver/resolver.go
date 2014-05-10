@@ -45,7 +45,7 @@ func CreateResolver(makeState func()types.State, trailingDistance int, durablePa
 
     // apply any transaction that exist in the log
     transactionProcessor := func(t types.Transaction) {
-      rs.submitTransactionLockless(t)
+      rs.submitTransactionLockless(t, false)
     }
     rs.durableLogger.ReadAll(transactionProcessor)
   }
@@ -53,10 +53,10 @@ func CreateResolver(makeState func()types.State, trailingDistance int, durablePa
   return rs
 }
 
-func (rs *Resolver) appendTransaction(t types.Transaction) {
+func (rs *Resolver) appendTransaction(t types.Transaction, appendToDurableLog bool) {
   debug.Assert(rs.log.Len() <= rs.trailingDistance,
-         "Log length %s > trailing distance %s",
-         debug.Stringify(rs.log.Len()), debug.Stringify(rs.trailingDistance))
+               "Log length %d > trailing distance %d",
+               rs.log.Len(), rs.trailingDistance)
 
   if rs.log.Len() == rs.trailingDistance {
     sid := rs.trailingState.Id()
@@ -64,19 +64,23 @@ func (rs *Resolver) appendTransaction(t types.Transaction) {
     oldtrid := oldT.Id()
 
     debug.Assert(sid == oldtrid,
-           "Id mismatch: sid %s != oldtrid %s",
-           debug.Stringify(sid), debug.Stringify(oldtrid))
+                 "Id mismatch: sid %d != oldtrid %d",
+                 sid, oldtrid)
 
     // the log is full, first apply a transaction to the trailing state
     ok, _ := rs.trailingState.Apply(oldT)
     rs.trailingState.SetId(sid + 1)
 
     debug.Assert(ok,
-                 "Failed to apply transaction %s to trailing state %s",
-                 debug.Stringify(rs.log.Front().Value), debug.Stringify(rs.trailingState))
+                 "Failed to apply transaction %+v to trailing state %+v",
+                 rs.log.Front().Value, rs.trailingState)
 
     delete(rs.transactionIdLookup, oldtrid)
     rs.log.Remove(rs.log.Front())
+  }
+
+  if appendToDurableLog && rs.durableLogger != nil {
+    rs.durableLogger.Append(t)
   }
 
   rs.log.PushBack(t)
@@ -85,15 +89,15 @@ func (rs *Resolver) appendTransaction(t types.Transaction) {
 
 func assertRecentTransaction(s *types.State, t types.Transaction) {
   debug.Assert((*s).Id() == t.Id(),
-               "Transaction %s not recent relative to state %s",
-               debug.Stringify(t), debug.Stringify(s))
+               "Transaction %+v not recent relative to state %+v",
+               t, s)
 }
 
-func (rs *Resolver) transactionSuccess(t types.Transaction) (bool, types.Transaction) {
+func (rs *Resolver) transactionSuccess(t types.Transaction, appendToDurableLog bool) (bool, types.Transaction) {
   assertRecentTransaction(&rs.currentState, t)
 
   rs.currentState.SetId(rs.currentState.Id() + 1)
-  rs.appendTransaction(t)
+  rs.appendTransaction(t, appendToDurableLog)
   return true, t
 }
 
@@ -183,11 +187,12 @@ func (rs *Resolver) CurrentState(callback func(types.State)) {
 
 /*
 submitTransactionLockless - lockless version of SubmitTransaction.
-  Called by SubmitTransaction after acquiring the write lock on the Resolver.
+  Called by SubmitTransaction after acquiring the write lock on the Resolver. Then, appendToDurableLog = true
+  Also called when restoring state from log. Then, appendToDurableLog = false
 
   Write lock on the Resolver must be held when calling this method.
 */
-func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.Transaction) {
+func (rs *Resolver) submitTransactionLockless(t types.Transaction, appendToDurableLog bool) (bool, types.Transaction) {
   trid := t.Id()
   sid := rs.currentState.Id()
   tsid := rs.trailingState.Id()
@@ -201,10 +206,10 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.
     ok, newT := rs.currentState.Apply(t)
 
     debug.Assert(ok,
-                 "Current transaction %s failed to apply against current state %s",
-                 debug.Stringify(t), debug.Stringify(rs.currentState))
+                 "Current transaction %+v failed to apply against current state %+v",
+                 t, rs.currentState)
 
-    return rs.transactionSuccess(newT)
+    return rs.transactionSuccess(newT, appendToDurableLog)
   }
 
   /*
@@ -216,7 +221,7 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.
     ok, newT := rs.currentState.Apply(t)
 
     if ok {
-      return rs.transactionSuccess(newT)
+      return rs.transactionSuccess(newT, appendToDurableLog)
     }
 
     // failed to apply, attempt to resolve
@@ -227,10 +232,10 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.
       ok, newT = rs.currentState.Apply(newT)
 
       debug.Assert(ok,
-        "Failed to apply transaction %s that was resolved successfully against state %s",
-        debug.Stringify(t), debug.Stringify(rs.currentState))
+        "Failed to apply transaction %+v that was resolved successfully against state %+v",
+        t, rs.currentState)
 
-      return rs.transactionSuccess(newT)
+      return rs.transactionSuccess(newT, appendToDurableLog)
     }
 
     // failed to resolve, reject
@@ -246,7 +251,7 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.
     ok, newT := rs.currentState.Apply(t)
 
     if ok {
-      return rs.transactionSuccess(newT)
+      return rs.transactionSuccess(newT, appendToDurableLog)
     }
 
     // failed to apply, reject
@@ -254,8 +259,8 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.
   }
 
   debug.Assert(false,
-               "Unreachable case in SubmitTransaction: trid=%s tsid=%s sid=%s",
-               debug.Stringify(trid), debug.Stringify(tsid), debug.Stringify(sid))
+               "Unreachable case in SubmitTransaction: trid=%d tsid=%d sid=%d",
+               trid, tsid, sid)
   return false, nil
 }
 
@@ -272,5 +277,5 @@ func (rs *Resolver) SubmitTransaction(t types.Transaction) (bool, types.Transact
     return false, nil
   }
 
-  return rs.submitTransactionLockless(t)
+  return rs.submitTransactionLockless(t, true)
 }
