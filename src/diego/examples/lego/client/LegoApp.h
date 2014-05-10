@@ -37,6 +37,8 @@ class LegoApp {
 
     const std::vector<LegoTransaction> & GetTransactionLog();
 
+    void DumpScenegraph();
+
   private:
     struct _CallbackData {
         LegoApp *app;
@@ -64,7 +66,10 @@ class LegoApp {
     void _AddBrick(LegoBrick *brick,
                    uint32_t brickIndex,
                    SbVec3f *coords,
-                   int32_t *indices);
+                   SbVec3f *colors,
+                   int32_t *indices,
+                   int32_t *matIndices,
+                   int32_t *texIndices);
 
     std::vector<SfNoticeMgr::Key> _noticeKeys;
 
@@ -90,6 +95,8 @@ class LegoApp {
     SoSwitch                   *_previewEnvSwitch;
     SoDrawStyle                *_sceneDrawStyle;
     SoCoordinate3              *_brickCoords;
+    SoMaterial                 *_brickMaterial;
+    SoTextureCoordinate2       *_brickTexCoords;
     SoIndexedFaceSet           *_brickIFS;
 };
 

@@ -30,6 +30,9 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     connect(_ui->opBox, 
             SIGNAL(returnPressed()), this, 
             SLOT(_NewOp()));
+    connect(_ui->actionDumpScenegraph,
+            SIGNAL(triggered(bool)), this,
+            SLOT(_DumpScenegraph()));
 }
 
 LegoMainWindow::~LegoMainWindow()
@@ -81,4 +84,10 @@ LegoMainWindow::_NewOp()
         _ui->logTextEdit->appendPlainText(op.c_str());
     }
     _ui->opBox->clear();
+}
+
+void
+LegoMainWindow::_DumpScenegraph()
+{
+    _app->DumpScenegraph();
 }

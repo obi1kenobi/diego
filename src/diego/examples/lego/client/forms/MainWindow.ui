@@ -171,9 +171,16 @@
     </property>
     <addaction name="actionCreate_Brick"/>
    </widget>
+   <widget class="QMenu" name="menuDeveloper">
+    <property name="title">
+     <string>Developer</string>
+    </property>
+    <addaction name="actionDumpScenegraph"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuBricks"/>
+   <addaction name="menuDeveloper"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -773,6 +780,11 @@
   <action name="actionCreate_Brick">
    <property name="text">
     <string>Create Brick</string>
+   </property>
+  </action>
+  <action name="actionDumpScenegraph">
+   <property name="text">
+    <string>Dump Scenegraph</string>
    </property>
   </action>
  </widget>

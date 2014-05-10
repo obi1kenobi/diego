@@ -24,6 +24,7 @@ class LegoMainWindow : public QMainWindow
   protected slots:
       void _AddBrick();
       void _NewOp();
+      void _DumpScenegraph();
 
   private:
     void _Initialize();

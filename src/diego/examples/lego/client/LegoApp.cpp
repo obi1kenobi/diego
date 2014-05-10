@@ -49,7 +49,7 @@ LegoApp::InitializeViewers(QWidget *, QWidget *parentWidget)
     viewer->setBackgroundColor(SbColor(1, 1, 1));
 
     SoDirectionalLight *headlight = viewer->getHeadlight();
-    headlight->intensity.setValue(0.5);
+    headlight->intensity.setValue(0.8);
 
     // Careful; have to set up the scenegraph to a viewer before
     // retrieving the camera. It's the process of setting the
@@ -178,8 +178,20 @@ LegoApp::_CreateScene()
 
     // Lego bricks
     _brickCoords = new SoCoordinate3();
+    SoMaterialBinding *brickMB = new SoMaterialBinding();
+    brickMB->value.setValue(SoMaterialBinding::PER_VERTEX_INDEXED);
+    _brickMaterial = new SoMaterial();
+    _brickMaterial->specularColor.setValue(SbVec3f(1, 1, 1));
+    _brickMaterial->shininess.setValue(1);
+    _brickTexCoords = new SoTextureCoordinate2();
+    SoTexture2 *tex = new SoTexture2();
+    tex->filename.setValue("textures/legoWhiteTop.jpg");
     _brickIFS = new SoIndexedFaceSet();
     _sceneMeshes->addChild(_brickCoords);
+    _sceneMeshes->addChild(_brickMaterial);
+    _sceneMeshes->addChild(brickMB);
+    _sceneMeshes->addChild(_brickTexCoords);
+    _sceneMeshes->addChild(tex);
     _sceneMeshes->addChild(_brickIFS);
 
     // The scene "environment", i.e., ground plane, etc.
@@ -243,6 +255,9 @@ LegoApp::_CreatePlatformBed()
         _platformXf->translation.setValue(0, 0, -_bedSize[2] / 2.0f);
         SoTexture2 *platformTex = new SoTexture2();
         platformTex->filename.setValue("textures/groundTexture.jpg");
+        SoMaterial *mtl = new SoMaterial();
+        mtl->shininess.setValue(1);
+        mtl->specularColor.setValue(SbVec3f(1, 1, 1));
         _platformCube = new SoCube();
         _platformCube->width.setValue(_bedSize[0]);
         _platformCube->height.setValue(_bedSize[1]);
@@ -336,19 +351,43 @@ LegoApp::_UnregisterNoticeHandlers()
 inline
 static
 void
-_AddTriangle(int32_t *indices, uint32_t *startIndex, uint32_t v0, uint32_t v1, uint32_t v2)
+_AddTriangle(int *startIndex, 
+             int32_t *indices, 
+             int32_t *matIndices,
+             int32_t *texIndices, 
+             int v0, int v1, int v2,
+             int color,
+             int t0, int t1, int t2)
 {
-    indices[(*startIndex)++] = v0;
-    indices[(*startIndex)++] = v1;
-    indices[(*startIndex)++] = v2;
-    indices[(*startIndex)++] = -1;
+    uint32_t vi = *startIndex;
+    indices[vi++] = v0;
+    indices[vi++] = v1;
+    indices[vi++] = v2;
+    indices[vi++] = -1;
+
+    uint32_t mi = *startIndex;
+    matIndices[mi++] = color;
+    matIndices[mi++] = color;
+    matIndices[mi++] = color;
+    matIndices[mi++] = -1;
+
+    uint32_t ti = *startIndex;
+    texIndices[ti++] = t0;
+    texIndices[ti++] = t1;
+    texIndices[ti++] = t2;
+    texIndices[ti++] = -1;
+
+    *startIndex += 4;
 }
 
 void
 LegoApp::_AddBrick(LegoBrick *brick,
                    uint32_t brickIndex,
                    SbVec3f *coords,
-                   int32_t *indices)
+                   SbVec3f *colors,
+                   int32_t *indices,
+                   int32_t *matIndices,
+                   int32_t *texIndices)
 {
     const MfVec3i &pos = brick->GetPosition();
     const MfVec3i &size = brick->GetSize();
@@ -366,8 +405,9 @@ LegoApp::_AddBrick(LegoBrick *brick,
     float yFaceSize = size[1];
     float zFaceSize = size[2];
 
-    uint32_t startVertex = brickIndex * 8;
-    uint32_t vindex = startVertex;
+    // sv = start vertex
+    int sv = brickIndex * 8;
+    int vindex = sv;
     coords[vindex++] = SbVec3f(xStart,             yStart,             zStart + zFaceSize);
     coords[vindex++] = SbVec3f(xStart + xFaceSize, yStart,             zStart + zFaceSize);
     coords[vindex++] = SbVec3f(xStart,             yStart + yFaceSize, zStart + zFaceSize);
@@ -377,19 +417,25 @@ LegoApp::_AddBrick(LegoBrick *brick,
     coords[vindex++] = SbVec3f(xStart,             yStart + yFaceSize, zStart);
     coords[vindex++] = SbVec3f(xStart + xFaceSize, yStart + yFaceSize, zStart);
 
-    uint32_t iindex = brickIndex * 12 * 4;
-    _AddTriangle(indices, &iindex, startVertex + 0, startVertex + 1, startVertex + 2);
-    _AddTriangle(indices, &iindex, startVertex + 2, startVertex + 1, startVertex + 3);
-    _AddTriangle(indices, &iindex, startVertex + 5, startVertex + 4, startVertex + 7);
-    _AddTriangle(indices, &iindex, startVertex + 7, startVertex + 4, startVertex + 6);
-    _AddTriangle(indices, &iindex, startVertex + 4, startVertex + 0, startVertex + 6);
-    _AddTriangle(indices, &iindex, startVertex + 6, startVertex + 0, startVertex + 2);
-    _AddTriangle(indices, &iindex, startVertex + 1, startVertex + 5, startVertex + 3);
-    _AddTriangle(indices, &iindex, startVertex + 3, startVertex + 5, startVertex + 7);
-    _AddTriangle(indices, &iindex, startVertex + 2, startVertex + 3, startVertex + 6);
-    _AddTriangle(indices, &iindex, startVertex + 6, startVertex + 3, startVertex + 7);
-    _AddTriangle(indices, &iindex, startVertex + 4, startVertex + 5, startVertex + 0);
-    _AddTriangle(indices, &iindex, startVertex + 0, startVertex + 5, startVertex + 1);
+    const MfVec3f &color = brick->GetColor();
+    colors[brickIndex] = SbVec3f(color[0], color[1], color[2]);
+    int matIndex = brickIndex;
+
+    int iindex = brickIndex * 12 * 4;
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 0, sv + 1, sv + 2, matIndex, 0, 1, 2);
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 2, sv + 1, sv + 3, matIndex, 2, 1, 3);
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 5, sv + 4, sv + 7, matIndex, 0, 0, 0);
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 7, sv + 4, sv + 6, matIndex, 0, 0, 0);
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 4, sv + 0, sv + 6, matIndex, 0, 0, 0);
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 6, sv + 0, sv + 2, matIndex, 0, 0, 0);
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 1, sv + 5, sv + 3, matIndex, 0, 0, 0);
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 3, sv + 5, sv + 7, matIndex, 0, 0, 0);
+
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 2, sv + 3, sv + 6, matIndex, 0, 0, 0);
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 6, sv + 3, sv + 7, matIndex, 0, 0, 0);
+
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 4, sv + 5, sv + 0, matIndex, 0, 0, 0);
+    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 0, sv + 5, sv + 1, matIndex, 0, 0, 0);
 }
 
 void
@@ -401,25 +447,53 @@ LegoApp::_ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &)
 void
 LegoApp::_BuildBricks()
 {
+    if (_brickTexCoords->point.getNum() == 0) {
+        _brickTexCoords->point.setNum(4);
+        SbVec2f *texCoords = _brickTexCoords->point.startEditing();
+        texCoords[0] =  SbVec2f(0, 0);
+        texCoords[1] =  SbVec2f(1, 0);
+        texCoords[2] =  SbVec2f(0, 1);
+        texCoords[3] =  SbVec2f(1, 1);
+        _brickTexCoords->point.finishEditing();
+    }
+
     const auto &bricks = _universe->GetBricks();
 
     _brickCoords->point.setNum(8 * bricks.size());
     SbVec3f *coords = _brickCoords->point.startEditing();
 
-    _brickIFS->coordIndex.setNum(12 * 4 * bricks.size());
+    _brickMaterial->diffuseColor.setNum(bricks.size());
+    SbVec3f *colors = _brickMaterial->diffuseColor.startEditing();
+
+    int numBrickIndices = 12 * 4 * bricks.size();
+    _brickIFS->coordIndex.setNum(numBrickIndices);
     int32_t *indices = _brickIFS->coordIndex.startEditing();
+
+    _brickIFS->materialIndex.setNum(numBrickIndices);
+    int32_t *matIndices = _brickIFS->materialIndex.startEditing();
+
+    _brickIFS->textureCoordIndex.setNum(numBrickIndices);
+    int32_t *texIndices = _brickIFS->textureCoordIndex.startEditing();
 
     for (uint32_t i = 0; i < bricks.size(); ++i) {
         auto *brick = bricks[i];
-        _AddBrick(brick, i, coords, indices);
+        _AddBrick(brick, i, coords, colors, indices, matIndices, texIndices);
     }
 
     _brickCoords->point.finishEditing();
     _brickIFS->coordIndex.finishEditing();
+    _brickIFS->textureCoordIndex.finishEditing();
 }
 
 const std::vector<LegoTransaction> &
 LegoApp::GetTransactionLog()
 {
     return _universe->GetTransactionMgr()->GetLog();
+}
+
+void
+LegoApp::DumpScenegraph()
+{
+    SoWriteAction wa;
+    wa.apply(_sceneRoot);
 }
