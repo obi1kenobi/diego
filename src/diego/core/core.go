@@ -13,10 +13,12 @@ import "diego/namespace"
 
 /*
 AssertCoresEqual - assert that two diego cores have the same information.
-Useful for durability tests
+  Useful for durability tests
 */
-func AssertCoresEqual (dc1, dc2 *DiegoCore) {
-  namespace.AssertNamespacesEqual(dc1.nsManager, dc2.nsManager)
+func AssertCoresEqual (dc1, dc2 *DiegoCore,
+                       stateEquals func(a, b types.State)bool,
+                       transactionEquals func(a, b types.Transaction)bool) {
+  namespace.AssertNamespacesEqual(dc1.nsManager, dc2.nsManager, stateEquals, transactionEquals)
 }
 
 /*
