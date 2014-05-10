@@ -12,82 +12,82 @@ type kvStore struct {
 
 // last-writer-wins set op
 type lwwSetOp struct {
-  id int64
-  key string
-  value string
+  Tid int64
+  Key string
+  Value string
 }
 
 func (op *lwwSetOp) Id() int64 {
-  return op.id
+  return op.Tid
 }
 
 func (op *lwwSetOp) SetId(id int64) {
-  op.id = id
+  op.Tid = id
 }
 
 // op that is rejected if not against latest state
 // (pessimistically assumes that any unseen transactions taint the state)
 type pessimisticSetOp struct {
-  id int64
-  key string
-  value string
+  Tid int64
+  Key string
+  Value string
 }
 
 func (op *pessimisticSetOp) Id() int64 {
-  return op.id
+  return op.Tid
 }
 
 func (op *pessimisticSetOp) SetId(id int64) {
-  op.id = id
+  op.Tid = id
 }
 
 // op that is rejected if there were any changes to the key since the last-seen state
 // (optimistically assumes that there were no changes, fails if this was wrong)
 type testAndSetOp struct {
-  id int64
-  key string
-  value string
+  Tid int64
+  Key string
+  Value string
 }
 
 func (op *testAndSetOp) Id() int64 {
-  return op.id
+  return op.Tid
 }
 
 func (op *testAndSetOp) SetId(id int64) {
-  op.id = id
+  op.Tid = id
 }
 
 // append-to-key op
 type appendOp struct {
-  id int64
-  key string
-  value string
+  Tid int64
+  Key string
+  Value string
 }
 
 func (op *appendOp) Id() int64 {
-  return op.id
+  return op.Tid
 }
 
 func (op *appendOp) SetId(id int64) {
-  op.id = id
+  op.Tid = id
 }
 
 // contrived example of an op that needs the log to get resolved
 // opnum is incremented for each flipflopAddOp executed (on any key)
 // if opnum is even, the value is added, otherwise, it is subtracted from the key
 type flipflopAddOp struct {
-  id int64
-  key string
-  opnum int
-  value int
+  Tid int64
+  Key string
+  Opnum int
+  Value int
 }
 
 func (op *flipflopAddOp) Id() int64 {
-  return op.id
+  return op.Tid
 }
 
 func (op *flipflopAddOp) SetId(id int64) {
-  op.id = id
+  op.Tid = id
 }
 
 func (kv *kvStore) Equals(kv2 *kvStore) bool {
@@ -123,14 +123,14 @@ func (kv *kvStore) Id() int64 {
 }
 
 func (kv *kvStore) applyLwwSet(x *lwwSetOp) (bool, types.Transaction) {
-  kv.data[x.key] = x.value
-  x.id = kv.id
+  kv.data[x.Key] = x.Value
+  x.Tid = kv.id
   return true, x
 }
 
 func (kv *kvStore) applyPessimisticSet(x *pessimisticSetOp) (bool, types.Transaction) {
-  if kv.id == x.id {
-    kv.data[x.key] = x.value
+  if kv.id == x.Tid {
+    kv.data[x.Key] = x.Value
     return true, x
   }
 
@@ -138,8 +138,8 @@ func (kv *kvStore) applyPessimisticSet(x *pessimisticSetOp) (bool, types.Transac
 }
 
 func (kv *kvStore) applyTestAndSet(x *testAndSetOp) (bool, types.Transaction) {
-  if kv.id == x.id {
-    kv.data[x.key] = x.value
+  if kv.id == x.Tid {
+    kv.data[x.Key] = x.Value
     return true, x
   }
 
@@ -147,31 +147,31 @@ func (kv *kvStore) applyTestAndSet(x *testAndSetOp) (bool, types.Transaction) {
 }
 
 func (kv *kvStore) applyAppend(x *appendOp) (bool, types.Transaction) {
-  kv.data[x.key] = kv.data[x.key] + x.value
-  x.id = kv.id
+  kv.data[x.Key] = kv.data[x.Key] + x.Value
+  x.Tid = kv.id
   return true, x
 }
 
 func (kv *kvStore) applyFlipflopAdd(x *flipflopAddOp) (bool, types.Transaction) {
-  if kv.id != x.id {
+  if kv.id != x.Tid {
     return false, nil
   }
 
-  val, ok := kv.data[x.key]
+  val, ok := kv.data[x.Key]
   num := 0
   if ok {
     numm, oks := strconv.Atoi(val)
     num = numm  // silly Go, it doesn't let you have one existing and one new variable in assignments
-    debug.Assert(oks == nil, "Bad conversion to int from %s", kv.data[x.key])
+    debug.Assert(oks == nil, "Bad conversion to int from %s", kv.data[x.Key])
   }
 
-  if x.opnum % 2 == 0 {
-    num += x.value
+  if x.Opnum % 2 == 0 {
+    num += x.Value
   } else {
-    num -= x.value
+    num -= x.Value
   }
 
-  kv.data[x.key] = strconv.Itoa(num)
+  kv.data[x.Key] = strconv.Itoa(num)
   return true, x
 }
 
@@ -194,63 +194,63 @@ func (kv *kvStore) Apply(t types.Transaction) (bool, types.Transaction) {
 }
 
 func (op *flipflopAddOp) resolveFlipFlop(id int64, log *list.List) (bool, types.Transaction) {
-  opnum := op.opnum
+  Opnum := op.Opnum
   newT := new(flipflopAddOp)
-  newT.key = op.key
-  newT.value = op.value
-  newT.id = id
+  newT.Key = op.Key
+  newT.Value = op.Value
+  newT.Tid = id
 
   e := log.Front()
-  for e != nil && e.Value.(types.Transaction).Id() < op.id {
+  for e != nil && e.Value.(types.Transaction).Id() < op.Tid {
     e = e.Next()
   }
 
-  debug.Assert(e != nil, "Ran out of log elements before reaching op number %d", op.id)
+  debug.Assert(e != nil, "Ran out of log elements before reaching op number %d", op.Tid)
 
   for e != nil {
     val := e.Value
     switch val.(type) {
     case *flipflopAddOp:
-      opnum++
+      Opnum++
     }
     e = e.Next()
   }
 
-  newT.opnum = opnum
+  newT.Opnum = Opnum
   return true, newT
 }
 
 func (op *testAndSetOp) resolveTestAndSet(id int64, log *list.List) (bool, types.Transaction) {
   newT := new(testAndSetOp)
-  newT.key = op.key
-  newT.value = op.value
-  newT.id = id
+  newT.Key = op.Key
+  newT.Value = op.Value
+  newT.Tid = id
 
   e := log.Front()
-  for e != nil && e.Value.(types.Transaction).Id() < op.id {
+  for e != nil && e.Value.(types.Transaction).Id() < op.Tid {
     e = e.Next()
   }
 
-  debug.Assert(e != nil, "Ran out of log elements before reaching op number %d", op.id)
+  debug.Assert(e != nil, "Ran out of log elements before reaching op number %d", op.Tid)
 
   for e != nil {
     val := e.Value
     modkey := ""
     switch x := val.(type) {
     case *lwwSetOp:
-      modkey = x.key
+      modkey = x.Key
     case *pessimisticSetOp:
-      modkey = x.key
+      modkey = x.Key
     case *testAndSetOp:
-      modkey = x.key
+      modkey = x.Key
     case *appendOp:
-      modkey = x.key
+      modkey = x.Key
     case *flipflopAddOp:
-      modkey = x.key
+      modkey = x.Key
     }
 
-    // if anyone modified the key, abort
-    if modkey == op.key {
+    // if anyone modified the Key, abort
+    if modkey == op.Key {
       return false, nil
     }
 

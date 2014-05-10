@@ -46,7 +46,7 @@ func CreateResolver(makeState func()types.State, trailingDistance int, durablePa
     // apply any transaction that exist in the log
     transactionProcessor := func(t types.Transaction) {
       debug.DPrintf(2, "reading transaction...")
-      rs.submitTransactionLockless(t)
+      rs.submitTransactionLockless(t, false)
     }
     rs.durableLogger.ReadAll(transactionProcessor)
   }
@@ -54,7 +54,7 @@ func CreateResolver(makeState func()types.State, trailingDistance int, durablePa
   return rs
 }
 
-func (rs *Resolver) appendTransaction(t types.Transaction) {
+func (rs *Resolver) appendTransaction(t types.Transaction, appendToDurableLog bool) {
   debug.Assert(rs.log.Len() <= rs.trailingDistance,
          "Log length %s > trailing distance %s",
          debug.Stringify(rs.log.Len()), debug.Stringify(rs.trailingDistance))
@@ -80,6 +80,10 @@ func (rs *Resolver) appendTransaction(t types.Transaction) {
     rs.log.Remove(rs.log.Front())
   }
 
+  if appendToDurableLog && rs.durableLogger != nil {
+    rs.durableLogger.Append(t)
+  }
+
   rs.log.PushBack(t)
   rs.transactionIdLookup[t.Id()] = rs.log.Back()
 }
@@ -90,11 +94,11 @@ func assertRecentTransaction(s *types.State, t types.Transaction) {
                debug.Stringify(t), debug.Stringify(s))
 }
 
-func (rs *Resolver) transactionSuccess(t types.Transaction) (bool, types.Transaction) {
+func (rs *Resolver) transactionSuccess(t types.Transaction, appendToDurableLog bool) (bool, types.Transaction) {
   assertRecentTransaction(&rs.currentState, t)
 
   rs.currentState.SetId(rs.currentState.Id() + 1)
-  rs.appendTransaction(t)
+  rs.appendTransaction(t, appendToDurableLog)
   return true, t
 }
 
@@ -184,11 +188,12 @@ func (rs *Resolver) CurrentState(callback func(types.State)) {
 
 /*
 submitTransactionLockless - lockless version of SubmitTransaction.
-  Called by SubmitTransaction after acquiring the write lock on the Resolver.
+  Called by SubmitTransaction after acquiring the write lock on the Resolver. Then, appendToDurableLog = true
+  Also called when restoring state from log. Then, appendToDurableLog = false
 
   Write lock on the Resolver must be held when calling this method.
 */
-func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.Transaction) {
+func (rs *Resolver) submitTransactionLockless(t types.Transaction, appendToDurableLog bool) (bool, types.Transaction) {
   trid := t.Id()
   sid := rs.currentState.Id()
   tsid := rs.trailingState.Id()
@@ -205,7 +210,7 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.
                  "Current transaction %s failed to apply against current state %s",
                  debug.Stringify(t), debug.Stringify(rs.currentState))
 
-    return rs.transactionSuccess(newT)
+    return rs.transactionSuccess(newT, appendToDurableLog)
   }
 
   /*
@@ -217,7 +222,7 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.
     ok, newT := rs.currentState.Apply(t)
 
     if ok {
-      return rs.transactionSuccess(newT)
+      return rs.transactionSuccess(newT, appendToDurableLog)
     }
 
     // failed to apply, attempt to resolve
@@ -231,7 +236,7 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.
         "Failed to apply transaction %s that was resolved successfully against state %s",
         debug.Stringify(t), debug.Stringify(rs.currentState))
 
-      return rs.transactionSuccess(newT)
+      return rs.transactionSuccess(newT, appendToDurableLog)
     }
 
     // failed to resolve, reject
@@ -247,7 +252,7 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction) (bool, types.
     ok, newT := rs.currentState.Apply(t)
 
     if ok {
-      return rs.transactionSuccess(newT)
+      return rs.transactionSuccess(newT, appendToDurableLog)
     }
 
     // failed to apply, reject
@@ -273,5 +278,5 @@ func (rs *Resolver) SubmitTransaction(t types.Transaction) (bool, types.Transact
     return false, nil
   }
 
-  return rs.submitTransactionLockless(t)
+  return rs.submitTransactionLockless(t, true)
 }
