@@ -61,6 +61,22 @@ func TestAppend(t *testing.T) {
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
 }
 
+func TestConcatValues(t *testing.T) {
+  rs, s := setup()
+
+  testData := []tests.TestDataItem {
+    tests.MakeTestDataItem(&lwwSetOp{OpCore{0, "a", "b"}}, tests.Success, keyValuePredicate("a", "b")),
+    tests.MakeTestDataItem(&concatValuesOp{1, "concat_1", []string{"a"}, []string{"prefix_"}}, tests.Success, keyValuePredicate("concat_1", "prefix_b")),
+    tests.MakeTestDataItem(&lwwSetOp{OpCore{2, "b", "c"}}, tests.Success, keyValuePredicate("b", "c")),
+    tests.MakeTestDataItem(&lwwSetOp{OpCore{3, "c", "d"}}, tests.Success, keyValuePredicate("c", "d")),
+    tests.MakeTestDataItem(&concatValuesOp{3, "concat_2", []string{"a", "b", "c"}, []string{"prefix_"}}, tests.Success, keyValuePredicate("concat_2", "prefix_bc")),
+    tests.MakeTestDataItem(&lwwSetOp{OpCore{4, "c", "f"}}, tests.Success, keyValuePredicate("c", "f")),
+    tests.MakeTestDataItem(&concatValuesOp{4, "concat_3", []string{"a", "b", "c"}, []string{"prefix_"}}, tests.Success, keyValuePredicate("concat_2", "prefix_bc")),
+  }
+
+  tests.RunSequentialTest(t, rs, testData, s, stateEquals)
+}
+
 func TestFlipflopAdd(t *testing.T) {
   rs, s := setup()
 

@@ -53,7 +53,7 @@ CreateManagedResolver - makes a managed resolver based on the knowledge of which
                       and which transactions resolve against each other.
 */
 func CreateManagedResolver(makeContext func(current types.Transaction, ancestorState *types.State)interface{},
-                           updateContext func(current, existing types.Transaction, context interface{}),
+                           updateContext func(current, existing types.Transaction, context interface{})bool,
                            commutesWith func(current, existing types.Transaction, context interface{})bool,
                            resolvesWith func(current,
                                              existing types.Transaction,
@@ -73,8 +73,11 @@ func CreateManagedResolver(makeContext func(current types.Transaction, ancestorS
     } else {
       e = log.Front()
       diff := current.Id() - e.Value.(types.Transaction).Id()
-      for i := int64(1); i < diff; i++ {
-        updateContext(current, e.Value.(types.Transaction), context)
+      for i := int64(0); i < diff; i++ {
+        if !updateContext(current, e.Value.(types.Transaction), context) {
+          debug.DPrintf(3, "Failed to update context for transaction %+v against %+v", current, e.Value)
+          return false, nil
+        }
         e = e.Next()
       }
     }

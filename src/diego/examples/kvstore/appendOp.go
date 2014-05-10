@@ -23,8 +23,9 @@ func (op *appendOp) MakeContext(ancestor types.State) interface{} {
   return nil
 }
 
-func (op *appendOp) UpdateContext(existing types.Transaction, context interface{}) {
+func (op *appendOp) UpdateContext(existing types.Transaction, context interface{}) bool {
   debug.Assert(false, "UpdateContext called on appendOp")
+  return true
 }
 
 func (op *appendOp) CommutesWith(t types.Transaction, context interface{}) bool {
