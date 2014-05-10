@@ -39,6 +39,8 @@ class LegoApp {
 
     const std::vector<LegoTransaction> & GetTransactionLog();
 
+    void PollServer();
+
     void DumpScenegraph();
 
   private:
