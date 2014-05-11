@@ -3,15 +3,19 @@ package server
 import "container/list"
 import "diego/debug"
 import "diego/types"
-import "reflect"
 
 func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transaction) {
   xa := t.(*LegoTransaction)
 
-  // XXX: We blindly apply all transactions here, regardless of current state
+  if universe.id != xa.Tid {
+    return false, nil
+  }
 
   for _, op := range xa.Ops {
     if op.OpType == LegoOpCreateBrick {
+      debug.Assert(universe.canWriteBrick(op.Position, op.Size),
+                   "Creating a brick in area populated by another brick")
+
       universe.numBricks++
       brickId := universe.numBricks
 
@@ -47,14 +51,14 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
       case LegoOpModifyBrickSize:
         debug.DPrintf(1, "Modify brick id %d size to %d %d %d\n", op.BrickID,
                       op.Size.data[0], op.Size.data[1], op.Size.data[2])
-        brick.Size = op.Size
+        universe.resizeBrick(brick, op.Size)
       default:
         debug.Assert(false, "Found invalid op: %v", op)
       }
     }
   }
 
-  if (false) {
+  if false {
     universe.displayLevel(0)
   }
 
@@ -63,44 +67,102 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
 
 func (universe *LegoUniverse) Resolve(ancestorState *types.State,
                                       log *list.List,
-                                      current types.Transaction) (bool, types.Transaction) {
+                                      untypedNewXa types.Transaction) (bool, types.Transaction) {
   // Ops:
   // - insert brick
   // - delete brick
   // - modify brick
   //
-  // Conflict:
-  //    - two users inserting the same brick at same position.
-  //    - Resolution: instead of inserting a new brick, simply modify
-  currentXa := current.(*LegoTransaction)
-  currentOp := currentXa.Ops[0]
+  // Conflicts:
+  //
+  // 1. Insert brick where brick already inserted.
+  //    Resolution: Transaction rejected.
+  //
+  // 2. Modify brick that someone else modified.
+  //    Resolution: Transaction accepted unless:
+  //    a) Both modifications modify the same aspect of the brick
+  //       (position, colors, orientation or size)
+  //    b) Both modifications result in two bricks occupying the same space.
+  //
+  // 3. Modify brick that someone else deleted.
+  //    Resolution: Transaction rejected.
+  //
+  // Note: The state machine (if/then/else) is not optimally set up; 
+  // certain checks are done more than once but I intentionally opted 
+  // for a more straighforward/readable version than something that 
+  // would be hard to follow.
+  newXa := untypedNewXa.(*LegoTransaction)
+
+  // Default resolution is to simply accept this transform and
+  // bump the transaction id.
+  resolvedXa := &LegoTransaction{}
+  resolvedXa.Tid = universe.id
+  resolvedXa.Ops = newXa.Ops
+
   for e := log.Front(); e != nil; e = e.Next() {
     xa := e.Value.(*LegoTransaction)
-    if xa.Tid < currentXa.Tid {
+    // Ignore transactions you are already aware of
+    if xa.Tid < newXa.Tid {
       continue
     }
-
-    op := xa.Ops[0]
-
-    // Check for conflicting operations on same brick
-    opId := op.BrickID
-    currentOpId := currentOp.BrickID
-    if opId != 0 && opId == currentOpId {
-      // Check for modify conflicts
-      if currentOp.isModifyOp() {
-        // if currentOp.(type) == op.(type) {
-        if reflect.TypeOf(currentOp) == reflect.TypeOf(op) {
-          // Two conflicting modify ops
-          return false, current
-        }
-        if op.OpType == LegoOpDeleteBrick {
-          // Modify on a deleted brick
-          return false, current
+    // Compare ops from both transactions and look for conflicts
+    for _, op := range xa.Ops {
+      for _, newOp := range newXa.Ops {
+        if newOp.OpType == LegoOpCreateBrick {
+          if op.OpType == LegoOpCreateBrick {
+            brick := LegoBrick { Position: op.Position, Size: op.Size }
+            newBrick := LegoBrick { Position: newOp.Position, Size: newOp.Size }
+            if newBrick.Intersects(brick) {
+              // Two newly created bricks occupy same space
+              return false, nil
+            }
+          } else if op.isModifyOp() {
+            brick, _ := universe.GetBrick(op.BrickID)
+            updatedBrick := *brick
+            updatedBrick.Apply(op)
+            newOpBrick := LegoBrick { 0, op.Position, op.Size, op.Orientation, op.Color }
+            if updatedBrick.Intersects(newOpBrick) {
+              // Creating a brick where another brick moved into
+              return false, nil
+            }
+          }
+        } else if newOp.isModifyOp() {
+          if op.OpType == LegoOpCreateBrick {
+            brick := LegoBrick { 0, op.Position, op.Size, op.Orientation, op.Color }
+            newOpBrick, _ := universe.GetBrick(newOp.BrickID)
+            updatedNewOpBrick := *newOpBrick
+            updatedNewOpBrick.Apply(newOp)
+            if brick.Intersects(updatedNewOpBrick) {
+              // Brick moves into area where a brick was created
+              return false, nil
+            }
+          } else if newOp.BrickID == op.BrickID {
+            if newOp.OpType == op.OpType {
+              // Both modify the same aspect of the same brick
+              return false, nil
+            }
+            if op.OpType == LegoOpDeleteBrick {
+              // Trying to modify a deleted brick
+              return false, nil
+            }
+          } else if op.OpType != LegoOpDeleteBrick {
+            brick, _ := universe.GetBrick(op.BrickID)
+            updatedBrick := *brick
+            updatedBrick.Apply(op)
+            newOpBrick, _ := universe.GetBrick(op.BrickID)
+            updatedNewOpBrick := *newOpBrick
+            updatedNewOpBrick.Apply(newOp)
+            if updatedBrick.Intersects(updatedNewOpBrick) {
+              // Bricks intersect after each respective move/resize op
+              return false, nil
+            }
+          }
         }
       }
     }
   }
-  return true, current
+
+  return true, resolvedXa
 }
 
 func MakeState() types.State {

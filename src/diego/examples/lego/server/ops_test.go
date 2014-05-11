@@ -11,10 +11,6 @@ func setup()(*resolver.Resolver, *LegoUniverse) {
   return resolver.CreateResolver(MakeState, trailingDistance, ""), MakeState().(*LegoUniverse)
 }
 
-func TestLego(t *testing.T) {
-  // rs, s := setup()
-}
-
 func makeTransaction(id int64, ops []*LegoOp) *LegoTransaction {
   xa := &LegoTransaction{}
   xa.Tid = id
@@ -109,28 +105,69 @@ func checkBrick(t *testing.T,
   return true
 }
 
-func legoCreatePredicate(ops []*LegoOp) func(*testing.T, types.State) bool {
-  return func(t *testing.T, s types.State) bool {
-    op := ops[0]
-    universe := s.(*LegoUniverse)
+func legoCreatePredicate(expectedResult tests.TransactionResult,
+                         ops []*LegoOp) func(*testing.T, types.State) bool {
+  if expectedResult == tests.Success {
+    return func(t *testing.T, s types.State) bool {
+      op := ops[0]
+      universe := s.(*LegoUniverse)
 
-    // Did something get inserted?
-    for x := op.Position.data[0]; x < op.Position.data[0] + op.Size.data[0]; x++ {
-      for y := op.Position.data[1]; y < op.Position.data[1] + op.Size.data[1]; y++ {
-        for z := op.Position.data[2]; z < op.Position.data[2] + op.Size.data[2]; z++ {
-          id := universe.GetBrickIdAtPosition(MakeVec3i(x, y, z))
-            if id < 1 {
-              t.Errorf("No brick was inserted at position %d %d %d\n",
-                       op.Position.data[0], op.Position.data[1], op.Position.data[2])
-                return false
-            }
-            // Does the brick match the one we are inserting?
-            checkBrick(t, universe, id, op.Position, op.Size, op.Orientation, op.Color)
+      // Did something get inserted?
+      for x := op.Position.data[0]; x < op.Position.data[0] + op.Size.data[0]; x++ {
+        for y := op.Position.data[1]; y < op.Position.data[1] + op.Size.data[1]; y++ {
+          for z := op.Position.data[2]; z < op.Position.data[2] + op.Size.data[2]; z++ {
+            id := universe.GetBrickIdAtPosition(MakeVec3i(x, y, z))
+              if id < 1 {
+                t.Errorf("No brick was inserted at position %d %d %d\n",
+                        op.Position.data[0], op.Position.data[1], op.Position.data[2])
+                  return false
+              }
+              // Does the brick match the one we are inserting?
+              checkBrick(t, universe, id, op.Position, op.Size, op.Orientation, op.Color)
+          }
         }
       }
-    }
 
-    return true
+      return true
+    }
+  } else {
+    return nil
+  }
+}
+
+func legoModifyPredicate(expectedResult tests.TransactionResult,
+                         ops []*LegoOp) func(*testing.T, types.State) bool {
+  if expectedResult == tests.Success {
+    return func(t *testing.T, s types.State) bool {
+      op := ops[0]
+      universe := s.(*LegoUniverse)
+
+      switch op.OpType {
+      case LegoOpModifyBrickPosition:
+        brick, _ := universe.GetBrick(op.BrickID)
+        if brick.Position != op.Position ||
+          !universe.validateBrickFootprint(op.BrickID, op.Position, brick.Size) {
+          t.Errorf("Brick id %d did not move to desired position: %v",
+                   op.BrickID, op.Position)
+        }
+      case LegoOpModifyBrickSize:
+        brick, _ := universe.GetBrick(op.BrickID)
+        if brick.Size != op.Size ||
+          !universe.validateBrickFootprint(op.BrickID, brick.Position, op.Size) {
+          t.Errorf("Brick id %d did not resize to desired footprint: %v",
+                   op.BrickID, op.Size)
+        }
+      case LegoOpModifyBrickColor:
+        brick, _ := universe.GetBrick(op.BrickID)
+        if brick.Color != op.Color {
+          t.Errorf("Brick id %d did not change to desired color %v", op.Color)
+        }
+      }
+
+      return true
+    }
+  } else {
+    return nil
   }
 }
 
@@ -142,54 +179,73 @@ func TestCreateOp(t *testing.T) {
   rs, s := setup()
 
   // Transactions for tests and expected results
+  xaIds := []int64 {
+    0,
+    0,
+    1,
+    1,
+  }
   xas := [][]*LegoOp {
     { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+    { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 1, 0) } },
     { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i(10, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(0, 1, 0) } },
+    { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 9, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(0, 1, 0) } },
   }
   expectedResult := []tests.TransactionResult {
     tests.Success,
+    tests.Failure,
     tests.Success,
+    tests.Failure,
   }
 
   // Prepare tests
   testData := make([]tests.TestDataItem, len(xas))
-  for xaId, xa := range xas {
-    testData[xaId] =
-      tests.MakeTestDataItem(makeTransaction(int64(xaId), xa),
-                             expectedResult[xaId],
-                             legoCreatePredicate(xa))
+  for index, xa := range xas {
+    testData[index] =
+      tests.MakeTestDataItem(makeTransaction(xaIds[index], xa),
+                             expectedResult[index],
+                             legoCreatePredicate(expectedResult[index], xas[index]))
   }
 
   // Run tests
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
 }
 
-/*
 func TestModifyOp(t *testing.T) {
   rs, s := setup()
 
-  universe := s.(*LegoUniverse)
-
   // Transactions for tests and expected results
-  xas := [][]interface{} {
-    { &LegoOpCreateBrick { MakeVec3i(0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
-    { &LegoOpModifyBrickSize { MakeVec3i(10, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+  xaIds := []int64 {
+    0,
+    1,
+    1,
+    1,
+    1,
+  }
+  xas := [][]*LegoOp {
+    { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+    { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 2, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(0, 1, 0) } },
+    { &LegoOp { LegoOpModifyBrickPosition, 1, MakeVec3i( 1, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(0, 1, 0) } },
+    { &LegoOp { OpType: LegoOpModifyBrickSize, BrickID: 1, Size: MakeVec3i( 3, 2, 1) } },
+    { &LegoOp { OpType: LegoOpModifyBrickSize, BrickID: 1, Size: MakeVec3i( 2, 4, 1) } },
   }
   expectedResult := []tests.TransactionResult {
     tests.Success,
+    tests.Success,
+    tests.Failure,
+    tests.Failure,
     tests.Success,
   }
 
   // Prepare tests
   testData := make([]tests.TestDataItem, len(xas))
-  for xaId, xa := range xas {
-    testData[xaId] =
-      tests.MakeTestDataItem(makeTransaction(int64(xaId), xa),
-                             expectedResult[xaId],
-                             legoCreatePredicate(xa))
+  for index, xa := range xas {
+    testData[index] =
+      tests.MakeTestDataItem(makeTransaction(xaIds[index], xa),
+                             expectedResult[index],
+                             legoModifyPredicate(expectedResult[index], xas[index]))
   }
 
   // Run tests
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
 }
-*/
