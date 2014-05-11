@@ -49,24 +49,25 @@ LegoTransactionMgr::CloseTransaction()
 bool
 LegoTransactionMgr::ExecuteOp(const LegoOp &op)
 {
+    bool success = false;
     if (_xa) {
         // Accumulating ops into a transaction for lazy execution
         _xa->AddOp(op);
-        return true;
+        success = true;
     } else if (_network) {
         // Network is up and active; send transaction as usual
         LegoTransaction xa;
         xa.AddOp(op);
-        bool success = _ExecuteXa(xa);
-        LegoBricksChangedNotice().Send();
-        return success;
+        success = _ExecuteXa(xa);
     } else {
         // Execute locally and keep track of ops we need to send to server
         _offlineXa.AddOp(op);
-        _ExecuteOp(op);
-        LegoBricksChangedNotice().Send();
-        return true;
+        bool doNotify = true;
+        _ExecuteOp(op, doNotify);
+        success = true;
     }
+
+    return success;
 }
 
 bool
@@ -89,6 +90,11 @@ LegoTransactionMgr::_ExecuteXa(const LegoTransaction &xa)
     _ParseResponse(is, &serverLog);
     _ExecuteXas(serverLog);
 
+    LegoBricksChangedNotice().Send();
+    if (!success) {
+        LegoConflictNotice().Send();
+    }
+
     return success;
 }
 
@@ -97,7 +103,6 @@ LegoTransactionMgr::Sync()
 {
     _ExecuteXa(_offlineXa);
     _offlineXa.Clear();
-    LegoBricksChangedNotice().Send();
 }
 
 std::string
@@ -262,7 +267,7 @@ LegoTransactionMgr::_ExecuteXaOps(const LegoTransaction &xa)
 }
 
 void
-LegoTransactionMgr::_ExecuteOp(const LegoOp &op)
+LegoTransactionMgr::_ExecuteOp(const LegoOp &op, bool doNotify)
 {
     switch (op.GetType()) {
     case LegoOp::CREATE_BRICK: {
@@ -291,6 +296,10 @@ LegoTransactionMgr::_ExecuteOp(const LegoOp &op)
         LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
         brick->_Destroy();
     } break;
+    }
+
+    if (doNotify) {
+        LegoBricksChangedNotice().Send();
     }
 }
 

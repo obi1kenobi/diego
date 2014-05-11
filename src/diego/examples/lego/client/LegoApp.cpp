@@ -16,7 +16,9 @@ LegoApp::LegoApp(LegoMainWindow *mainWindow) :
     _worldMax(32, 32, 63),
     _bedSize(_worldSize[0], _worldSize[1], 1),
     _sceneRoot(NULL),
-    _platformRoot(NULL)
+    _platformRoot(NULL),
+    _alarmSensor(NULL),
+    _flash(false)
 {
     // Initialize the SoQt library first. 
     SoQt::init(mainWindow);
@@ -317,8 +319,15 @@ LegoApp::_BeginRenderSceneCB(void *userData, SoAction *action)
 void
 LegoApp::_DrawBackground()
 {
-    MfVec3f tc(116.0f / 255.0f, 146.0f / 255.0f, 164.0f / 255.0f);
-    MfVec3f bc( 24.0f / 255.0f,  27.0f / 255.0f,  29.0f / 255.0f);
+    MfVec3f tc;
+    MfVec3f bc;
+    if (_flash) {
+        tc = MfVec3f(1.0);
+        bc = MfVec3f(1.0);
+    } else {
+        tc = MfVec3f(116.0f / 255.0f, 146.0f / 255.0f, 164.0f / 255.0f);
+        bc = MfVec3f( 24.0f / 255.0f,  27.0f / 255.0f,  29.0f / 255.0f);
+    }
 
     glBegin(GL_QUADS);
     glColor3f(bc[0], bc[1], bc[2]);
@@ -342,6 +351,9 @@ LegoApp::_RegisterNoticeHandlers()
     _noticeKeys.push_back(
         SfNoticeMgr::Get().Register(this, 
             &LegoApp::_ProcessLegoBricksChangedNotice));
+    _noticeKeys.push_back(
+        SfNoticeMgr::Get().Register(this, 
+            &LegoApp::_ProcessLegoConflictNotice));
 }
 
 void
@@ -531,4 +543,30 @@ bool
 LegoApp::IsNetworkEnabled() const
 {
     return _universe->IsNetworkEnabled();
+}
+
+void
+LegoApp::_ProcessLegoConflictNotice(const LegoConflictNotice &)
+{
+    if (_alarmSensor) {
+        return;
+    }
+
+    // Flash screen
+    _flash = true;
+    _sceneRoot->touch();
+
+    // Schedule alarm to turn off flashing
+    _alarmSensor = new SoAlarmSensor(&LegoApp::_ToggleFlash, this);
+    _alarmSensor->setTimeFromNow(SbTime(0.5));
+    _alarmSensor->schedule();
+}
+
+void
+LegoApp::_ToggleFlash(void *userData, SoSensor *sensor)
+{
+    LegoApp *This = reinterpret_cast<LegoApp*>(userData);
+    This->_flash = false;
+    This->_sceneRoot->touch();
+    delete This->_alarmSensor; This->_alarmSensor = NULL;
 }

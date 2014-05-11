@@ -25,4 +25,8 @@ class LegoBricksChangedNotice : public SfNotice
 {
 };
 
+class LegoConflictNotice : public SfNotice
+{
+};
+
 #endif // __SF_NOTICE_H__

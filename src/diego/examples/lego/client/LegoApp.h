@@ -18,8 +18,11 @@
 class QWidget;
 class LegoBrick;
 class LegoBricksChangedNotice;
+class LegoConflictNotice;
 class LegoMainWindow;
 class LegoUniverse;
+class SoAlarmSensor;
+class SoSensor;
 
 class LegoApp {
   public:
@@ -71,6 +74,8 @@ class LegoApp {
 
     void _ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &n);
 
+    void _ProcessLegoConflictNotice(const LegoConflictNotice &n);
+
     void _AddBrick(LegoBrick *brick,
                    uint32_t brickIndex,
                    SbVec3f *coords,
@@ -78,6 +83,8 @@ class LegoApp {
                    int32_t *indices,
                    int32_t *matIndices,
                    int32_t *texIndices);
+
+    static void _ToggleFlash(void *userData, SoSensor *sensor);
 
     std::vector<SfNoticeMgr::Key> _noticeKeys;
 
@@ -110,6 +117,8 @@ class LegoApp {
     SoMaterial                 *_brickMaterial;
     SoTextureCoordinate2       *_brickTexCoords;
     SoIndexedFaceSet           *_brickIFS;
+    SoAlarmSensor              *_alarmSensor;
+    bool                        _flash;
 };
 
 #endif // __LEGO_APP_H__
