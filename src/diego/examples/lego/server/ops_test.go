@@ -211,39 +211,89 @@ func TestCreateOp(t *testing.T) {
   tests.RunSequentialTest(t, rs, testData, s, stateEquals)
 }
 
+type SetupXa struct {
+  id int64
+  expected tests.TransactionResult
+  ops []*LegoOp
+}
+
 func TestModifyOp(t *testing.T) {
   rs, s := setup()
 
   // Transactions for tests and expected results
-  xaIds := []int64 {
-    0,
-    1,
-    1,
-    1,
-    1,
-  }
-  xas := [][]*LegoOp {
-    { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
-    { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 2, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(0, 1, 0) } },
-    { &LegoOp { LegoOpModifyBrickPosition, 1, MakeVec3i( 1, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(0, 1, 0) } },
-    { &LegoOp { OpType: LegoOpModifyBrickSize, BrickID: 1, Size: MakeVec3i( 3, 2, 1) } },
-    { &LegoOp { OpType: LegoOpModifyBrickSize, BrickID: 1, Size: MakeVec3i( 2, 4, 1) } },
-  }
-  expectedResult := []tests.TransactionResult {
-    tests.Success,
-    tests.Success,
-    tests.Failure,
-    tests.Failure,
-    tests.Success,
+  xas := []SetupXa {
+    // Create brick #1 at (0, 0, 0)
+    SetupXa {
+      0,
+      tests.Success,
+      []*LegoOp { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+    },
+    // Create brick #2 at (2, 0, 0)
+    SetupXa {
+      1,
+      tests.Success,
+      []*LegoOp { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 2, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(0, 1, 0) } },
+    },
+    // Move brick #1 to (1, 0, 0) - conflict because brick #2 was created and there is now overlap
+    SetupXa {
+      1,
+      tests.Failure,
+      []*LegoOp { &LegoOp { OpType: LegoOpModifyBrickPosition, BrickID: 1, Position: MakeVec3i( 1, 0, 0) } },
+    },
+    // Create brick #3 at (0, 4, 0)
+    SetupXa {
+      2,
+      tests.Success,
+      []*LegoOp { &LegoOp { LegoOpCreateBrick, 0, MakeVec3i( 0, 4, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) } },
+    },
+    // Resize brick #1 to overlap brick #3 - conflict
+    SetupXa {
+      2,
+      tests.Failure,
+      []*LegoOp { &LegoOp { OpType: LegoOpModifyBrickSize, BrickID: 1, Size: MakeVec3i( 2, 6, 1) } },
+    },
+    // Resize brick #1 with no overlap to brick #3 - success
+    SetupXa {
+      2,
+      tests.Success,
+      []*LegoOp { &LegoOp { OpType: LegoOpModifyBrickSize, BrickID: 1, Size: MakeVec3i( 2, 4, 1) } },
+    },
+    // Change color of brick #1 and simultaneously move brick #1 - success
+    SetupXa {
+      4,
+      tests.Success,
+      []*LegoOp { &LegoOp { OpType: LegoOpModifyBrickColor, BrickID: 1, Color: MakeVec3f( 0, 0, 1) } },
+    },
+    SetupXa {
+      4,
+      tests.Success,
+      []*LegoOp { &LegoOp { OpType: LegoOpModifyBrickPosition, BrickID: 1, Position: MakeVec3i(12, 0, 1) } },
+    },
+    // Change color of brick #2 and simultaneously both move brick #2 (ok) and change its color (conflict)
+    SetupXa {
+      6,
+      tests.Success,
+      []*LegoOp {
+        &LegoOp { OpType: LegoOpModifyBrickColor, BrickID: 2, Color: MakeVec3f( 0, 0, 1) },
+      },
+    },
+    SetupXa {
+      6,
+      tests.Failure,
+      []*LegoOp {
+        &LegoOp { OpType: LegoOpModifyBrickPosition, BrickID: 2, Position: MakeVec3i(12, 12, 1) },
+        &LegoOp { OpType: LegoOpModifyBrickColor, BrickID: 2, Color: MakeVec3f( 1, 0, 1) },
+      },
+    },
   }
 
   // Prepare tests
   testData := make([]tests.TestDataItem, len(xas))
   for index, xa := range xas {
     testData[index] =
-      tests.MakeTestDataItem(makeTransaction(xaIds[index], xa),
-                             expectedResult[index],
-                             legoModifyPredicate(expectedResult[index], xas[index]))
+      tests.MakeTestDataItem(makeTransaction(xa.id, xa.ops),
+                             xa.expected,
+                             legoModifyPredicate(xa.expected, xa.ops))
   }
 
   // Run tests

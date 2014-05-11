@@ -8,6 +8,7 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
   xa := t.(*LegoTransaction)
 
   if universe.id != xa.Tid {
+    debug.DPrintf(1, "Xa (id=%d) is not against top of state (id=%d)\n", xa.Tid, universe.id)
     return false, nil
   }
 
@@ -28,10 +29,8 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
                     brickId, op.Position.data)
     } else {
       brick, ok := universe.bricks[op.BrickID]
-      if !ok {
-        debug.DPrintf(1, "BrickID %d not found\n", op.BrickID)
-        return false, nil
-      }
+      debug.Assert(ok, "BrickID %d not found\n", op.BrickID)
+
       switch op.OpType {
       case LegoOpDeleteBrick:
         debug.DPrintf(1, "Deleting brick with id %d\n", op.BrickID)
@@ -107,10 +106,12 @@ func (universe *LegoUniverse) Resolve(ancestorState *types.State,
 
   for e := log.Front(); e != nil; e = e.Next() {
     xa := e.Value.(*LegoTransaction)
+
     // Ignore transactions you are already aware of
     if xa.Tid < newXa.Tid {
       continue
     }
+
     // Compare ops from both transactions and look for conflicts
     for _, op := range xa.Ops {
       for _, newOp := range newXa.Ops {
@@ -143,8 +144,9 @@ func (universe *LegoUniverse) Resolve(ancestorState *types.State,
               return false, nil
             }
           } else if newOp.BrickID == op.BrickID {
-            if newOp.OpType == op.OpType {
-              // Both modify the same aspect of the same brick
+            if newOp.OpType == op.OpType && !newOp.equal(op) {
+              // Both modify the same aspect of the same brick in a
+              // different way.
               return false, nil
             }
             if op.OpType == LegoOpDeleteBrick {
