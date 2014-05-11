@@ -18,6 +18,15 @@ func makeResolver()*resolver.Resolver {
   return resolver.CreateResolver(makeState, trailingDistance, "")
 }
 
+func appendOpsEqual (a, b types.Transaction)bool {
+  ap1 := a.(*appendOp)
+  ap2 := b.(*appendOp)
+  if ap1.Tid != ap2.Tid || ap1.Key != ap2.Key || ap1.Value != ap2.Value {
+    return false
+  }
+  return true
+}
+
 func generateRandomData(fns []func(*rand.Rand)(types.Transaction, tests.TransactionResult),
                         rnd *rand.Rand) tests.TestDataItem {
   choice := rnd.Intn(len(fns))
