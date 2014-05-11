@@ -80,9 +80,9 @@ func (universe *LegoUniverse) Resolve(ancestorState *types.State,
   //
   // 2. Modify brick that someone else modified.
   //    Resolution: Transaction accepted unless:
-  //    a) Both modifications modify the same aspect of the brick
-  //       (position, colors, orientation or size)
-  //    b) Both modifications result in two bricks occupying the same space.
+  //    a) Both ops modify the same aspect of the brick
+  //       (position, color, orientation or size)
+  //    b) Ops result in two bricks intersecting.
   //
   // 3. Modify brick that someone else deleted.
   //    Resolution: Transaction rejected.
@@ -91,6 +91,12 @@ func (universe *LegoUniverse) Resolve(ancestorState *types.State,
   // certain checks are done more than once but I intentionally opted 
   // for a more straighforward/readable version than something that 
   // would be hard to follow.
+  //
+  // XXX: We don't handle propertly the case where an op from the log
+  // conflicts with an op from the new transaction but further down another
+  // op comes in that removes the conflict (e.g., our transaction creates a
+  // brick in a position where another op moves a brick into but yet
+  // another op moves the brick out of the way).
   newXa := untypedNewXa.(*LegoTransaction)
 
   // Default resolution is to simply accept this transform and
