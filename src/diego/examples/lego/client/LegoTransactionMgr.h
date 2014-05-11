@@ -42,7 +42,7 @@ class LegoTransactionMgr {
     void _ExecuteXas(const std::vector<LegoTransaction> &xas);
     bool _ExecuteXa(const LegoTransaction &xa);
     void _ExecuteXaOps(const LegoTransaction &xa);
-    void _ExecuteOp(const LegoOp &op);
+    void _ExecuteOp(const LegoOp &op, bool doNotify = false);
     std::string _SendMessage(const std::string &message);
     void _SkipWhiteSpace(std::istream &input);
 
