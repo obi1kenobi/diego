@@ -22,9 +22,9 @@ Failure - we expect the transaction to fail
 const Failure TransactionResult = -1
 
 /*
-Stale - we expect the transaction to return an old transaction
+SuccessLost - server successfully applied transaction, but reply is lost and is not applied locally
 */
-const Stale TransactionResult = 2
+const SuccessLost TransactionResult = 2
 
 /*
 NoCheck - we don't know whether the transaction will succeed or not
@@ -110,17 +110,12 @@ func expectSubmitFailure(t *testing.T, rs *resolver.Resolver,
   return true
 }
 
-func expectSubmitStale(t *testing.T, rs *resolver.Resolver,
-                       op types.Transaction, s types.State) bool {
+func expectSubmitSuccessLost(t *testing.T, rs *resolver.Resolver,
+                       op types.Transaction) bool {
   success := true
-  ok, newT := rs.SubmitTransaction(op)
+  ok, _ := rs.SubmitTransaction(op)
   if !ok {
     t.Errorf("Transaction %s failed to apply on server", debug.Stringify(op))
-    success = false
-  }
-  ok, _ = s.Apply(newT)
-  if ok {
-    t.Errorf("Transaction response %s should have failed to apply locally", debug.Stringify(newT))
     success = false
   }
   return success
@@ -148,8 +143,8 @@ func expectSubmitResult(t *testing.T, rs *resolver.Resolver,
     return expectSubmitSuccess(t, rs, op, s)
   case Failure:
     return expectSubmitFailure(t, rs, op)
-  case Stale:
-    return expectSubmitStale(t, rs, op, s)
+  case SuccessLost:
+    return expectSubmitSuccessLost(t, rs, op)
   default:
     return handleSubmit(t, rs, op, s)
   }

@@ -39,9 +39,11 @@ func runTest(t *testing.T, rs *resolver.Resolver,
     }
 
     success = success && expectSubmitResult(t, rs, data[i].op, s, data[i].submitSuccess)
-    success = success && expectNoNewTransactions(t, rs, s.Id())
-    success = success && expectConvergedState(t, rs, s, equals)
-    success = success && data[i].localStatePredicate(t, s)
+    if data[i].submitSuccess != SuccessLost {
+      success = success && expectNoNewTransactions(t, rs, s.Id())
+      success = success && expectConvergedState(t, rs, s, equals)
+      success = success && data[i].localStatePredicate(t, s)
+    }
   }
   return success
 }
