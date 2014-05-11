@@ -24,12 +24,96 @@ type Vec3i struct {
   data [3]int32
 }
 
+func MakeVec2i(x, y int32) Vec2i {
+  return Vec2i { [2]int32 { x, y } }
+}
+
 func MakeVec3i(x, y, z int32) Vec3i {
   return Vec3i { [3]int32 { x, y, z } }
 }
 
 func MakeVec3f(x, y, z float32) Vec3f {
   return Vec3f { [3]float32 { x, y, z } }
+}
+
+func MakeVec3d(x, y, z float64) Vec3d {
+  return Vec3d { [3]float64 { x, y, z } }
+}
+
+func (vec *Vec2i) Add(other Vec2i) Vec2i {
+  return MakeVec2i(vec.data[0] + other.data[0],
+                   vec.data[1] + other.data[1])
+}
+
+func (vec *Vec3i) Add(other Vec3i) Vec3i {
+  return MakeVec3i(vec.data[0] + other.data[0],
+                   vec.data[1] + other.data[1],
+                   vec.data[2] + other.data[2])
+}
+
+func (vec *Vec3f) Add(other Vec3f) Vec3f {
+  return MakeVec3f(vec.data[0] + other.data[0],
+                   vec.data[1] + other.data[1],
+                   vec.data[2] + other.data[2])
+}
+
+func (vec *Vec3d) Add(other Vec3d) Vec3d {
+  return MakeVec3d(vec.data[0] + other.data[0],
+                   vec.data[1] + other.data[1],
+                   vec.data[2] + other.data[2])
+}
+
+func (vec *Vec2i) Subtract(other Vec2i) Vec2i {
+  return MakeVec2i(vec.data[0] - other.data[0],
+                   vec.data[1] - other.data[1])
+}
+
+func (vec *Vec3i) Subtract(other Vec3i) Vec3i {
+  return MakeVec3i(vec.data[0] - other.data[0],
+                   vec.data[1] - other.data[1],
+                   vec.data[2] - other.data[2])
+}
+
+func (vec *Vec3f) Subtract(other Vec3f) Vec3f {
+  return MakeVec3f(vec.data[0] - other.data[0],
+                   vec.data[1] - other.data[1],
+                   vec.data[2] - other.data[2])
+}
+
+func (vec *Vec3d) Subtract(other Vec3d) Vec3d {
+  return MakeVec3d(vec.data[0] - other.data[0],
+                   vec.data[1] - other.data[1],
+                   vec.data[2] - other.data[2])
+}
+
+func (vec *Vec3f) Multiply(constant float32) Vec3f {
+  return MakeVec3f(vec.data[0] * constant,
+                   vec.data[1] * constant,
+                   vec.data[2] * constant)
+}
+
+func (vec *Vec3d) Multiply(constant float64) Vec3d {
+  return MakeVec3d(vec.data[0] * constant,
+                   vec.data[1] * constant,
+                   vec.data[2] * constant)
+}
+
+func (vec *Vec3i) Divide(constant float64) Vec3d {
+  return MakeVec3d(float64(vec.data[0]) / constant,
+                   float64(vec.data[1]) / constant,
+                   float64(vec.data[2]) / constant)
+}
+
+func (vec *Vec3f) Divide(constant float32) Vec3f {
+  return MakeVec3f(vec.data[0] / constant,
+                   vec.data[1] / constant,
+                   vec.data[2] / constant)
+}
+
+func (vec *Vec3d) Divide(constant float64) Vec3d {
+  return MakeVec3d(vec.data[0] / constant,
+                   vec.data[1] / constant,
+                   vec.data[2] / constant)
 }
 
 func (vec *Vec2i) Equal(other Vec2i) bool {
