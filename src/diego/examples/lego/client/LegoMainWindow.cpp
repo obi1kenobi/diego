@@ -106,6 +106,8 @@ LegoMainWindow::_DumpScenegraph()
 void
 LegoMainWindow::_ImportModels()
 {
+    _timer->stop();
+
     QStringList paths = 
         QFileDialog::getOpenFileNames(this, 
                                      tr("Import Models"), 
@@ -122,6 +124,8 @@ LegoMainWindow::_ImportModels()
     }
 
     _app->ImportModels(models);
+
+    _timer->start(LEGO_POLL_INTERVAL);
 }
 
 void
