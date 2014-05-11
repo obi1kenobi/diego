@@ -34,7 +34,7 @@ func runTest(t *testing.T, rs *resolver.Resolver,
     if dynamicTransactionIds {
       data[i].op.SetId(s.Id())
       if rnd.Float32() >= idRandomizeProbability {
-        randomizeTransactionId(data[i].op, rnd)
+        randomizeTransactionId(data[i].op, rs.CurrentStateId() - int64(rs.TrailingDistance()), rnd)
       }
     }
 

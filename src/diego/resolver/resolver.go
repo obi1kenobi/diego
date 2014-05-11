@@ -22,6 +22,7 @@ type Resolver struct {
   transactionIdLookup map[int64]*list.Element
   trailingDistance int
   durableLogger *durable.TransactionLogger
+  requestTokens map[types.RequestToken]*list.Element
   closed bool
 }
 
@@ -39,6 +40,7 @@ func CreateResolver(makeState func()types.State, trailingDistance int, durablePa
   rs.trailingDistance = trailingDistance
   rs.log = new(list.List)
   rs.transactionIdLookup = make(map[int64]*list.Element)
+  rs.requestTokens = make(map[types.RequestToken]*list.Element)
 
   if durablePath != "" {
     rs.durableLogger = durable.CreateTransactionLogger(durablePath)
@@ -76,6 +78,7 @@ func (rs *Resolver) appendTransaction(t types.Transaction, appendToDurableLog bo
                  rs.log.Front().Value, rs.trailingState)
 
     delete(rs.transactionIdLookup, oldtrid)
+    delete(rs.requestTokens, oldT.GetToken())
     rs.log.Remove(rs.log.Front())
   }
 
@@ -85,6 +88,7 @@ func (rs *Resolver) appendTransaction(t types.Transaction, appendToDurableLog bo
 
   rs.log.PushBack(t)
   rs.transactionIdLookup[t.Id()] = rs.log.Back()
+  rs.requestTokens[t.GetToken()] = rs.log.Back()
 }
 
 func assertRecentTransaction(s *types.State, t types.Transaction) {
@@ -168,6 +172,13 @@ func (rs *Resolver) CurrentStateId() int64 {
 }
 
 /*
+TrailingDistance - Returns the trailing distance of the resolver
+*/
+func (rs *Resolver) TrailingDistance() int {
+  return rs.trailingDistance
+}
+
+/*
 CurrentState - Calls the specified callback with the current state as its argument.
   Made to accept a callback so it can enforce proper concurrency control -- the readers' lock
   is held for the duration of the callback execution.
@@ -196,6 +207,15 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction, appendToDurab
   trid := t.Id()
   sid := rs.currentState.Id()
   tsid := rs.trailingState.Id()
+
+  /*
+  Ensure at-most-once semantics: If the token provided by the transaction is the same as
+  a transaction in the log, fail the transaction.
+  */
+  if oldT, exists := rs.requestTokens[t.GetToken()]; exists {
+    debug.DPrintf(1, "Got duplicate request %v", t)
+    return true, oldT.Value.(types.Transaction)
+  }
 
   /*
   case 1: transaction is based on up-to-date state
@@ -243,18 +263,12 @@ func (rs *Resolver) submitTransactionLockless(t types.Transaction, appendToDurab
   }
 
   /*
-  case 3: transaction is behind the trailing state
-    attempt to apply to the current state
-    if that fails, reject without trying to resolve
+  case 3: transaction is behind the trailing state,
+    reject without trying to resolve.
+    This helps preserve at-most-once semantics.
   */
   if trid < tsid {
-    ok, newT := rs.currentState.Apply(t)
-
-    if ok {
-      return rs.transactionSuccess(newT, appendToDurableLog)
-    }
-
-    // failed to apply, reject
+    debug.DPrintf(1, "Rejecting %+v, too old. Currently at %d.", t, tsid)
     return false, nil
   }
 

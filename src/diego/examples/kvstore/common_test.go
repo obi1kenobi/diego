@@ -10,8 +10,8 @@ import "diego/types"
 const trailingDistance = 50
 const randomKeyspaceSize = 25
 
-func setup()(*resolver.Resolver, *kvStore) {
-  return makeResolver(), makeState().(*kvStore)
+func setup()(*resolver.Resolver, *kvStore, func() types.RequestToken) {
+  return makeResolver(), makeState().(*kvStore), types.MakeRequestTokenGenerator(0)
 }
 
 func makeResolver()*resolver.Resolver {
@@ -27,10 +27,10 @@ func appendOpsEqual (a, b types.Transaction)bool {
   return true
 }
 
-func generateRandomData(fns []func(*rand.Rand)(types.Transaction, tests.TransactionResult),
-                        rnd *rand.Rand) tests.TestDataItem {
+func generateRandomData(fns []func(*rand.Rand, types.RequestToken)(types.Transaction, tests.TransactionResult),
+                        rnd *rand.Rand, token types.RequestToken) tests.TestDataItem {
   choice := rnd.Intn(len(fns))
-  op, checkType := fns[choice](rnd)
+  op, checkType := fns[choice](rnd, token)
   return tests.MakeTestDataItem(op, checkType, nil)
 }
 
@@ -42,41 +42,42 @@ func generateValue(rnd *rand.Rand) string {
   return generateKey(rnd)
 }
 
-func generateRandomLwwSet(rnd *rand.Rand)(types.Transaction, tests.TransactionResult) {
+func generateRandomLwwSet(rnd *rand.Rand, tok types.RequestToken)(types.Transaction, tests.TransactionResult) {
   // set the transaction id to 0 because it will be set dynamically during the test
-  return &lwwSetOp{0,
+  return &lwwSetOp{0, tok,
                    generateKey(rnd),
                    generateValue(rnd)}, tests.Success
 }
 
-func generateRandomPessimisticSet(rnd *rand.Rand)(types.Transaction, tests.TransactionResult) {
+func generateRandomPessimisticSet(rnd *rand.Rand, tok types.RequestToken)(types.Transaction, tests.TransactionResult) {
   // set the transaction id to 0 because it will be set dynamically during the test
-  return &pessimisticSetOp{0,
+  return &pessimisticSetOp{0, tok,
                            generateKey(rnd),
                            generateValue(rnd)}, tests.NoCheck
 }
 
-func generateRandomTestAndSet(rnd *rand.Rand)(types.Transaction, tests.TransactionResult) {
+func generateRandomTestAndSet(rnd *rand.Rand, tok types.RequestToken)(types.Transaction, tests.TransactionResult) {
   // set the transaction id to 0 because it will be set dynamically during the test
-  return &testAndSetOp{0,
+  return &testAndSetOp{0, tok,
                        generateKey(rnd),
                        generateValue(rnd)}, tests.NoCheck
 }
 
-func generateRandomAppend(rnd *rand.Rand)(types.Transaction, tests.TransactionResult) {
+func generateRandomAppend(rnd *rand.Rand, tok types.RequestToken)(types.Transaction, tests.TransactionResult) {
   // set the transaction id to 0 because it will be set dynamically during the test
-  return &appendOp{0,
+  return &appendOp{0, tok,
                    generateKey(rnd),
                    generateValue(rnd)}, tests.NoCheck
 }
 
 func makeTestData(data []tests.TestDataItem, rnd *rand.Rand) {
-  fns := []func(*rand.Rand)(types.Transaction, tests.TransactionResult) { generateRandomLwwSet,
+  nt := types.MakeRequestTokenGenerator(0)
+  fns := []func(*rand.Rand, types.RequestToken)(types.Transaction, tests.TransactionResult) { generateRandomLwwSet,
                                                                              generateRandomPessimisticSet,
                                                                              generateRandomAppend,
                                                                              generateRandomTestAndSet }
   for i := 0; i < len(data); i++ {
-    data[i] = generateRandomData(fns, rnd)
+    data[i] = generateRandomData(fns, rnd, nt())
   }
 }
 
