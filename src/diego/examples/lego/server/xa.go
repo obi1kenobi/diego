@@ -8,6 +8,7 @@ import "diego/types"
 // Transactions
 type LegoTransaction struct {
   Tid int64
+  Token types.RequestToken
   Ops []*LegoOp
 }
 
@@ -19,9 +20,15 @@ func (xa *LegoTransaction) Id() int64 {
   return xa.Tid
 }
 
+func (xa *LegoTransaction) GetToken() types.RequestToken {
+  return xa.Token
+}
+
 func SerializeTransaction(ns string, xa *LegoTransaction, b *bytes.Buffer) {
   b.WriteString(ns)
   serializeInt64(xa.Tid, b)
+  serializeInt64(xa.Token.ClientId, b)
+  serializeInt64(xa.Token.ReqId, b)
   b.WriteByte('\n')
   for _, op := range xa.Ops {
     op.serialize(b)
@@ -35,9 +42,11 @@ func DeserializeTransaction(b *bytes.Buffer) (string, *LegoTransaction) {
   ns, err := b.ReadString(legoDelim)
   ns = ns[:len(ns)-1]
   debug.EnsureNoError(err)
+  xa.Tid = deserializeInt64(b)
+  xa.Token.ClientId = deserializeInt64(b)
   val, err := b.ReadString('\n')
   debug.EnsureNoError(err)
-  xa.Tid, err = strconv.ParseInt(val[:len(val)-1], 10, 64)
+  xa.Token.ReqId, err = strconv.ParseInt(val[:len(val)-1], 10, 64)
   debug.EnsureNoError(err)
 
   for {

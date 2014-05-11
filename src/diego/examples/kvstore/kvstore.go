@@ -13,6 +13,7 @@ type kvStore struct {
 // last-writer-wins set op
 type lwwSetOp struct {
   Tid int64
+  Token types.RequestToken
   Key string
   Value string
 }
@@ -25,10 +26,15 @@ func (op *lwwSetOp) SetId(id int64) {
   op.Tid = id
 }
 
+func (op *lwwSetOp) GetToken() types.RequestToken {
+  return op.Token
+}
+
 // op that is rejected if not against latest state
 // (pessimistically assumes that any unseen transactions taint the state)
 type pessimisticSetOp struct {
   Tid int64
+  Token types.RequestToken
   Key string
   Value string
 }
@@ -41,10 +47,15 @@ func (op *pessimisticSetOp) SetId(id int64) {
   op.Tid = id
 }
 
+func (op *pessimisticSetOp) GetToken() types.RequestToken {
+  return op.Token
+}
+
 // op that is rejected if there were any changes to the key since the last-seen state
 // (optimistically assumes that there were no changes, fails if this was wrong)
 type testAndSetOp struct {
   Tid int64
+  Token types.RequestToken
   Key string
   Value string
 }
@@ -57,9 +68,14 @@ func (op *testAndSetOp) SetId(id int64) {
   op.Tid = id
 }
 
+func (op *testAndSetOp) GetToken() types.RequestToken {
+  return op.Token
+}
+
 // append-to-key op
 type appendOp struct {
   Tid int64
+  Token types.RequestToken
   Key string
   Value string
 }
@@ -72,11 +88,16 @@ func (op *appendOp) SetId(id int64) {
   op.Tid = id
 }
 
+func (op *appendOp) GetToken() types.RequestToken {
+  return op.Token
+}
+
 // contrived example of an op that needs the log to get resolved
 // opnum is incremented for each flipflopAddOp executed (on any key)
 // if opnum is even, the value is added, otherwise, it is subtracted from the key
 type flipflopAddOp struct {
   Tid int64
+  Token types.RequestToken
   Key string
   Opnum int
   Value int
@@ -88,6 +109,10 @@ func (op *flipflopAddOp) Id() int64 {
 
 func (op *flipflopAddOp) SetId(id int64) {
   op.Tid = id
+}
+
+func (op *flipflopAddOp) GetToken() types.RequestToken {
+  return op.Token
 }
 
 func (kv *kvStore) Equals(kv2 *kvStore) bool {
@@ -199,6 +224,7 @@ func (op *flipflopAddOp) resolveFlipFlop(id int64, log *list.List) (bool, types.
   newT.Key = op.Key
   newT.Value = op.Value
   newT.Tid = id
+  newT.Token = op.Token
 
   e := log.Front()
   for e != nil && e.Value.(types.Transaction).Id() < op.Tid {
@@ -225,6 +251,7 @@ func (op *testAndSetOp) resolveTestAndSet(id int64, log *list.List) (bool, types
   newT.Key = op.Key
   newT.Value = op.Value
   newT.Tid = id
+  newT.Token = op.Token
 
   e := log.Front()
   for e != nil && e.Value.(types.Transaction).Id() < op.Tid {

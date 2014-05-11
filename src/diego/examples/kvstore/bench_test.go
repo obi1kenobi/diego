@@ -32,8 +32,9 @@ func durableRecentTransactionBench(trailingDist int, b *testing.B) {
 func recentTransactionHarness(rs *resolver.Resolver, b *testing.B) {
   xas := make([]types.Transaction, b.N)
   accept := make([]bool, b.N)
+  nt := types.MakeRequestTokenGenerator(0)
   for i := 0; i < b.N; i++ {
-    xas[i] = &lwwSetOp{int64(i), "a", "b"}
+    xas[i] = &lwwSetOp{int64(i), nt(), "a", "b"}
   }
   b.ResetTimer()
 
@@ -73,6 +74,7 @@ func durableFullLogReadBench(trailingDist int, b *testing.B) {
 func fullLogReadHarness(rs *resolver.Resolver, trailingDist int, b *testing.B) {
   xas := make([]types.Transaction, b.N)
   accept := make([]bool, b.N)
+  nt := types.MakeRequestTokenGenerator(0)
   max := func(a, b int64) int64 {
     if a < b {
       return b
@@ -81,7 +83,7 @@ func fullLogReadHarness(rs *resolver.Resolver, trailingDist int, b *testing.B) {
   }
 
   for i := 0; i < b.N; i++ {
-    xas[i] = &testAndSetOp{max(0, int64(i-trailingDist)), strconv.Itoa(i), "b"}
+    xas[i] = &testAndSetOp{max(0, int64(i-trailingDist)), nt(), strconv.Itoa(i), "b"}
   }
   b.ResetTimer()
 

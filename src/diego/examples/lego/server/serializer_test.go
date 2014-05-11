@@ -6,7 +6,7 @@ import "testing"
 func TestSerializeCreateOp(t *testing.T) {
   op := &LegoOp { LegoOpCreateBrick, 0, MakeVec3i(0, 0, 0), MakeVec3i(2, 2, 1), BrickOrientationNorth, MakeVec3f(1, 0, 0) }
   ops := []*LegoOp { op }
-  xa := &LegoTransaction{0, ops}
+  xa := &LegoTransaction{Ops: ops}
   ns := "testNs"
 
   b := new(bytes.Buffer)
