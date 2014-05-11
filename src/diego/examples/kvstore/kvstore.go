@@ -7,6 +7,7 @@ import "diego/helpers"
 
 type OpCore struct {
   Tid int64
+  Token types.RequestToken
   Key string
   Value string
 }
@@ -59,6 +60,10 @@ func (op *OpCore) Id() int64 {
 
 func (op *OpCore) SetId(id int64) {
   op.Tid = id
+}
+
+func (op *OpCore) GetToken() types.RequestToken {
+  return op.Token
 }
 
 type kvStore struct {

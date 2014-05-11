@@ -8,6 +8,7 @@ import "diego/helpers"
 // the concatenation of all Values + the values of all Keys at the specified Tid
 type concatValuesOp struct {
   Tid int64
+  Token types.RequestToken
   ResultKey string
   Keys []string
   Values []string
@@ -19,6 +20,10 @@ func (op *concatValuesOp) Id() int64 {
 
 func (op *concatValuesOp) SetId(id int64) {
   op.Tid = id
+}
+
+func (op *concatValuesOp) GetToken() types.RequestToken {
+  return op.Token
 }
 
 func (op *concatValuesOp) Execute(s types.State)types.Transaction {

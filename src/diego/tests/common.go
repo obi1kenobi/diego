@@ -22,9 +22,15 @@ Failure - we expect the transaction to fail
 const Failure TransactionResult = -1
 
 /*
+Stale - we expect the transaction to return an old transaction
+*/
+const Stale TransactionResult = 2
+
+/*
 NoCheck - we don't know whether the transaction will succeed or not
 */
 const NoCheck TransactionResult = 0
+
 
 /*
 TestDataItem -
@@ -50,10 +56,15 @@ func MakeTestDataItem(op types.Transaction, success TransactionResult,
   return TestDataItem{op, success, localStatePredicate}
 }
 
-func randomizeTransactionId(op types.Transaction, rnd *rand.Rand) {
+func randomizeTransactionId(op types.Transaction, lowerBound int64, rnd *rand.Rand) {
   maxId := op.Id() - 1
   if maxId > 0 {
-    op.SetId(rnd.Int63n(maxId))
+    potential := rnd.Int63n(maxId)
+    if potential < lowerBound {
+      op.SetId(lowerBound)
+    } else {
+      op.SetId(potential)
+    }
   } else if maxId == 0 {
     op.SetId(0)
   }
@@ -99,6 +110,22 @@ func expectSubmitFailure(t *testing.T, rs *resolver.Resolver,
   return true
 }
 
+func expectSubmitStale(t *testing.T, rs *resolver.Resolver,
+                       op types.Transaction, s types.State) bool {
+  success := true
+  ok, newT := rs.SubmitTransaction(op)
+  if !ok {
+    t.Errorf("Transaction %s failed to apply on server", debug.Stringify(op))
+    success = false
+  }
+  ok, _ = s.Apply(newT)
+  if ok {
+    t.Errorf("Transaction response %s should have failed to apply locally", debug.Stringify(newT))
+    success = false
+  }
+  return success
+}
+
 func handleSubmit(t *testing.T, rs *resolver.Resolver,
                   op types.Transaction, s types.State) bool {
   ok, newT := rs.SubmitTransaction(op)
@@ -121,6 +148,8 @@ func expectSubmitResult(t *testing.T, rs *resolver.Resolver,
     return expectSubmitSuccess(t, rs, op, s)
   case Failure:
     return expectSubmitFailure(t, rs, op)
+  case Stale:
+    return expectSubmitStale(t, rs, op, s)
   default:
     return handleSubmit(t, rs, op, s)
   }
