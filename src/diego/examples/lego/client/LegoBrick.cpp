@@ -65,3 +65,10 @@ LegoBrick::SetColor(const MfVec3f &color)
     bool success = _xaMgr->ExecuteOp(op);
     return success;
 }
+
+LegoBrick *
+LegoBrick::_Clone()
+{
+    return new LegoBrick(_universe, _id, _position, _size, 
+                         (Orientation) _orientation, _color);
+}

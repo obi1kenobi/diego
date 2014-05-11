@@ -176,6 +176,8 @@
      <string>Developer</string>
     </property>
     <addaction name="actionDumpScenegraph"/>
+    <addaction name="separator"/>
+    <addaction name="actionNetwork"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -785,6 +787,17 @@
   <action name="actionDumpScenegraph">
    <property name="text">
     <string>Dump Scenegraph</string>
+   </property>
+  </action>
+  <action name="actionNetwork">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Network</string>
    </property>
   </action>
  </widget>

@@ -13,13 +13,19 @@ class LegoTransactionMgr {
   public:
     LegoTransactionMgr(LegoUniverse *universe);
 
+    void SetNetworkEnabled(bool enabled);
+
+    bool IsNetworkEnabled() const {
+        return _network;
+    }
+
+    void Sync();
+
     void OpenTransaction();
 
     void CloseTransaction();
 
     bool ExecuteOp(const LegoOp &op);
-
-    bool ExecuteXa(const LegoTransaction &xa);
 
     void CatchupWithServer();
 
@@ -33,14 +39,19 @@ class LegoTransactionMgr {
     std::string _SendToServer(const LegoTransaction &xa);
     void _ParseResponse(std::istream &is,
                         std::vector<LegoTransaction> *serverLog);
-    void _Execute(const std::vector<LegoTransaction> &xas);
+    void _ExecuteXas(const std::vector<LegoTransaction> &xas);
+    bool _ExecuteXa(const LegoTransaction &xa);
+    void _ExecuteXaOps(const LegoTransaction &xa);
+    void _ExecuteOp(const LegoOp &op);
     std::string _SendMessage(const std::string &message);
     void _SkipWhiteSpace(std::istream &input);
 
+    bool _network;
     LegoUniverse *_universe;
     uint64_t _xaIds;
     std::vector<LegoTransaction> _xas;
     LegoTransaction *_xa;
+    LegoTransaction _offlineXa;
 };
 
 #endif //  LEGO_TRANSACTION_MGR_H

@@ -28,6 +28,7 @@ class LegoMainWindow : public QMainWindow
     void _NewOp();
     void _DumpScenegraph();
     void _PollServer();
+    void _SetNetworkEnabled(bool enabled);
 
   private:
     void _Initialize();

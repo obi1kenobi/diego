@@ -25,6 +25,10 @@ class LegoTransaction
         return _ops;
     }
 
+    void Clear() {
+        _ops.clear();
+    }
+
     void Serialize(std::ostream &os) const;
 
   private:

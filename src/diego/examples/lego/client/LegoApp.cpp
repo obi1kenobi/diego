@@ -520,3 +520,15 @@ LegoApp::PollServer()
 {
     _universe->CatchupWithServer();
 }
+
+void 
+LegoApp::SetNetworkEnabled(bool enabled)
+{
+    _universe->SetNetworkEnabled(enabled);
+}
+
+bool
+LegoApp::IsNetworkEnabled() const
+{
+    return _universe->IsNetworkEnabled();
+}

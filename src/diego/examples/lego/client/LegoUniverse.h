@@ -11,9 +11,17 @@ class LegoUniverse {
   public:
     LegoUniverse(const MfVec3i &gridSize);
 
+    ~LegoUniverse();
+
+    void Clear();
+
     uint64_t GetID() const {
         return _id;
     }
+
+    void SetNetworkEnabled(bool enabled);
+
+    bool IsNetworkEnabled() const;
 
     void CatchupWithServer();
 
@@ -35,6 +43,12 @@ class LegoUniverse {
     const std::vector<LegoBrick*> & GetBricks() const {
         return _bricks;
     }
+
+    // Save current state so that it can be restored.
+    void Snapshot();
+
+    // Restore from snap shot
+    void Restore();
 
   private:
     friend class LegoTransactionMgr;
@@ -69,6 +83,18 @@ class LegoUniverse {
 
     bool _IsValid(const LegoOp &op);
 
+    void _RecordBrick(LegoBrick *brick);
+
+    struct _State {
+        _State() : valid(false) {}
+
+        bool valid;
+        uint64_t id;
+        std::vector<LegoBrick*> bricks;
+        std::vector<uint64_t> grid;
+    };
+
+    bool _network;
     uint64_t _id;
     LegoTransactionMgr _xaMgr;
     LegoTransaction *_xa;
@@ -80,6 +106,8 @@ class LegoUniverse {
     _BrickMap _brickMap;
     uint64_t _brickID;
     std::vector<uint64_t> _grid;
+
+    _State _snapshot;
 };
 
 #endif // LEGO_UNIVERSE_H

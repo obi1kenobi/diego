@@ -40,6 +40,9 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     connect(_ui->actionDumpScenegraph,
             SIGNAL(triggered(bool)), this,
             SLOT(_DumpScenegraph()));
+    connect(_ui->actionNetwork, 
+            SIGNAL(triggered(bool)), this,
+            SLOT(_SetNetworkEnabled(bool)));
 
     // Timer for polling
     connect(_timer, SIGNAL(timeout()), this, SLOT(_PollServer()));
@@ -132,4 +135,10 @@ void
 LegoMainWindow::_PollServer()
 {
     _app->PollServer();
+}
+
+void
+LegoMainWindow::_SetNetworkEnabled(bool enabled)
+{
+    _app->SetNetworkEnabled(enabled);
 }

@@ -31,6 +31,33 @@ LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
     _xaMgr.CatchupWithServer();
 }
 
+LegoUniverse::~LegoUniverse()
+{
+    Clear();
+}
+
+void
+LegoUniverse::SetNetworkEnabled(bool enabled)
+{
+    if (enabled == _xaMgr.IsNetworkEnabled()) {
+        return;
+    }
+
+    _xaMgr.SetNetworkEnabled(enabled);
+    if (enabled) {
+        Restore();
+        _xaMgr.Sync();
+    } else {
+        Snapshot();
+    }
+}
+
+bool
+LegoUniverse::IsNetworkEnabled() const 
+{
+    return _xaMgr.IsNetworkEnabled();
+}
+
 void
 LegoUniverse::CatchupWithServer()
 {
@@ -50,9 +77,7 @@ LegoUniverse::ProcessOp(const std::string &opText)
         std::cerr << "Invalid op\n";
         return false;
     }
-    LegoTransaction xa;
-    xa.AddOp(op);
-    bool success = _xaMgr.ExecuteXa(xa);
+    bool success = _xaMgr.ExecuteOp(op);
     return success;
 }
 
@@ -105,6 +130,16 @@ LegoUniverse::_CreateBrick(const MfVec3i &position,
     uint64_t brickID = _brickID;
     LegoBrick *brick = 
         new LegoBrick(this, brickID, position, size, orientation, color);
+    _RecordBrick(brick);
+}
+
+void
+LegoUniverse::_RecordBrick(LegoBrick *brick)
+{
+    int64_t brickID = brick->GetID();
+    const MfVec3i &position = brick->GetPosition();
+    const MfVec3i &size = brick->GetSize();
+
     _bricks.push_back(brick);
     _brickMap.insert(_BrickMap::value_type(brickID, brick));
     for (int xs = 0; xs < size[0]; ++xs) {
@@ -138,4 +173,46 @@ LegoUniverse::GetBrickAt(const MfVec3i &position) const
         uint64_t brickID = _grid[gridPos];
         return GetBrick(brickID);
     }
+}
+
+void
+LegoUniverse::Snapshot()
+{
+    _snapshot.valid = true;
+    _snapshot.id = _id;
+    _snapshot.grid = _grid;
+    _snapshot.bricks.clear();
+    for (auto *brick : _bricks) {
+        LegoBrick *clone = brick->_Clone();
+        _snapshot.bricks.push_back(clone);
+    }
+}
+
+void
+LegoUniverse::Restore()
+{
+    if (!_snapshot.valid) {
+        return;
+    }
+
+    Clear();
+
+    _id = _snapshot.id;
+    _grid = _snapshot.grid;
+    for (auto *brick : _snapshot.bricks) {
+        _RecordBrick(brick);
+    }
+
+    _snapshot.valid = false;
+}
+
+void
+LegoUniverse::Clear()
+{
+    for (auto *brick : _bricks) {
+        delete brick;
+    }
+    _bricks.clear();
+    _brickMap.clear();
+    _grid.assign(_gridSize[0] * _gridSize[1] * _gridSize[2], 0);
 }
