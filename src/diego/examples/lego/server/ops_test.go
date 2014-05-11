@@ -15,9 +15,10 @@ func TestLego(t *testing.T) {
   // rs, s := setup()
 }
 
-func makeTransaction(id int64, ops []*LegoOp) *LegoTransaction {
+func makeTransaction(id int64, token types.RequestToken, ops []*LegoOp) *LegoTransaction {
   xa := &LegoTransaction{}
   xa.Tid = id
+  xa.Token = token
   xa.Ops = ops
   return xa
 }
@@ -153,9 +154,10 @@ func TestCreateOp(t *testing.T) {
 
   // Prepare tests
   testData := make([]tests.TestDataItem, len(xas))
+  nt := types.MakeRequestTokenGenerator(0)
   for xaId, xa := range xas {
     testData[xaId] =
-      tests.MakeTestDataItem(makeTransaction(int64(xaId), xa),
+      tests.MakeTestDataItem(makeTransaction(int64(xaId), nt(), xa),
                              expectedResult[xaId],
                              legoCreatePredicate(xa))
   }
