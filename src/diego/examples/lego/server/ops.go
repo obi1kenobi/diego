@@ -25,11 +25,17 @@ type LegoOp struct {
 
 func (op *LegoOp) isModifyOp() bool {
   switch op.OpType {
-  case LegoOpModifyBrickColor: return true
-  case LegoOpModifyBrickOrientation: return true
+  case LegoOpModifyBrickPosition: return true
   case LegoOpModifyBrickSize: return true
+  case LegoOpModifyBrickOrientation: return true
+  case LegoOpModifyBrickColor: return true
   }
   return false
+}
+
+func (op *LegoOp) isModifyFootprintOp() bool {
+  return op.OpType == LegoOpModifyBrickPosition ||
+         op.OpType == LegoOpModifyBrickSize
 }
 
 func (op *LegoOp) serialize(b *bytes.Buffer) {
