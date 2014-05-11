@@ -23,6 +23,40 @@ type LegoOp struct {
   Color Vec3f
 }
 
+func (op *LegoOp) equal(other *LegoOp) bool {
+  if op.OpType != other.OpType {
+    // Different op type
+    return false
+  } else if op.OpType == LegoOpCreateBrick {
+    // If create, compare brick characteristics
+    return op.Position == other.Position &&
+      op.Size == other.Size &&
+      op.Orientation == other.Orientation &&
+      op.Color == other.Color
+  } else {
+    // All other ops are on a given brick ID, so, first check for a
+    // mismatch there.
+    if op.BrickID != other.BrickID {
+      return false
+    } else {
+      // Now check for remaining modify differences
+      switch op.OpType {
+      case LegoOpModifyBrickPosition:
+        return op.Position == other.Position
+      case LegoOpModifyBrickColor:
+        return op.Color == other.Color
+      case LegoOpModifyBrickOrientation:
+          return op.Orientation == other.Orientation
+      case LegoOpModifyBrickSize:
+          return op.Size == other.Size
+      default:
+          // This should never be reached.
+          return false
+      }
+    }
+  }
+}
+
 func (op *LegoOp) isModifyOp() bool {
   switch op.OpType {
   case LegoOpModifyBrickPosition: return true

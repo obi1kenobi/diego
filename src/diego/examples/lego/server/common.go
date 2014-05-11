@@ -104,15 +104,6 @@ func (vec *Vec3i) Divide(constant float64) Vec3d {
                    float64(vec.data[2]) / constant)
 }
 
-/*
- * XXX: Can't overload method with a 32-bit float parameter?!
-func (vec *Vec3i) Divide(constant float32) Vec3f {
-  return MakeVec3f(float32(vec.data[0]) / constant,
-                   float32(vec.data[1]) / constant,
-                   float32(vec.data[2]) / constant)
-}
-*/
-
 func (vec *Vec3f) Divide(constant float32) Vec3f {
   return MakeVec3f(vec.data[0] / constant,
                    vec.data[1] / constant,
