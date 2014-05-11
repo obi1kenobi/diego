@@ -11,6 +11,7 @@ import "diego/helpers"
 // if opnum is even, the value is added, otherwise, it is subtracted from the key
 type flipflopAddOp struct {
   Tid int64
+  Token types.RequestToken
   Key string
   Opnum int
   Value int
@@ -22,6 +23,10 @@ func (op *flipflopAddOp) Id() int64 {
 
 func (op *flipflopAddOp) SetId(id int64) {
   op.Tid = id
+}
+
+func (op *flipflopAddOp) GetToken () types.RequestToken {
+  return op.Token
 }
 
 func (op *flipflopAddOp) Execute(s types.State)types.Transaction {

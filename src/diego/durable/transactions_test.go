@@ -9,6 +9,7 @@ import "diego/types"
 
 type testTx struct {
   IdNum int64
+  Token types.RequestToken
 }
 
 func (tx *testTx) Id() int64 {
@@ -17,6 +18,10 @@ func (tx *testTx) Id() int64 {
 
 func (tx *testTx) SetId(id int64) {
   tx.IdNum = id
+}
+
+func (tx *testTx) GetToken() types.RequestToken {
+  return tx.Token
 }
 
 func expectNFilesAtPath(t *testing.T, n int, path string) {
@@ -56,11 +61,12 @@ func expectNTransactions(t *testing.T, n int64, tl *TransactionLogger) {
 }
 
 var isSetUp bool
-func setup() {
+func setup() func()types.RequestToken{
   if !isSetUp {
     gob.Register(&testTx{})
     isSetUp = true
   }
+  return types.MakeRequestTokenGenerator(0)
 }
 
 /*
@@ -70,7 +76,7 @@ All the tests below use the directory ./_test when starting from the root of the
 func TestAppendFew(t *testing.T) {
   const basePath = "../../../_test/durable/tx_few"
   os.RemoveAll(basePath)
-  setup()
+  nt := setup()
 
   tl := CreateTransactionLogger(basePath)
   numTestEntries := 198
@@ -78,7 +84,7 @@ func TestAppendFew(t *testing.T) {
   tl.assertValid()
 
   for i := 0; i < numTestEntries; i++ {
-    tx := &testTx{int64(i)}
+    tx := &testTx{int64(i), nt()}
     tl.Append(tx)
     tl.assertValid()
   }
@@ -92,7 +98,7 @@ func TestAppendFew(t *testing.T) {
 func TestAppendMany(t *testing.T) {
   const basePath = "../../../_test/durable/tx_many"
   os.RemoveAll(basePath)
-  setup()
+  nt := setup()
 
   tl := CreateTransactionLogger(basePath)
   numTestEntries := maxChunkLength + 2
@@ -100,7 +106,7 @@ func TestAppendMany(t *testing.T) {
   tl.assertValid()
 
   for i := 0; i < numTestEntries; i++ {
-    tx := &testTx{int64(i)}
+    tx := &testTx{int64(i), nt()}
     tl.Append(tx)
     tl.assertValid()
   }
@@ -134,14 +140,14 @@ func TestCreateNextFiles(t *testing.T) {
 func TestLoadExisting(t *testing.T) {
   const basePath = "../../../_test/durable/load_existing"
   os.RemoveAll(basePath)
-  setup()
+  nt := setup()
 
   tl := CreateTransactionLogger(basePath)
   tl.assertValid()
 
   firstLimit := 3
   for i := 0; i < firstLimit; i++ {
-    tx := &testTx{int64(i)}
+    tx := &testTx{int64(i), nt()}
     tl.Append(tx)
     tl.assertValid()
   }
@@ -154,7 +160,7 @@ func TestLoadExisting(t *testing.T) {
   tl.assertValid()
 
   for i := firstLimit; i < maxChunkLength; i++ {
-    tx := &testTx{int64(i)}
+    tx := &testTx{int64(i), nt()}
     tl.Append(tx)
     tl.assertValid()
   }
