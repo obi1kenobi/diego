@@ -33,6 +33,20 @@ func validateBrickPosition(position Vec3i) {
   }
 }
 
+func (universe *LegoUniverse) validateBrickFootprint(id int64, position Vec3i, size Vec3i) bool {
+  for i := 0; i < 3; i++ {
+    for j := position.data[i]; j < position.data[i] + size.data[i]; j++ {
+      query := position
+      query.data[i] = j
+      brickId := universe.GetBrickIdAtPosition(query)
+      if brickId != id {
+        return false
+      }
+    }
+  }
+  return true
+}
+
 func getGridIndex(position Vec3i) (int32, int32, int32) {
   x := position.data[0] - legoGridMin[0]
   y := position.data[1] - legoGridMin[1]
@@ -48,7 +62,17 @@ func (universe *LegoUniverse) insertBrick(brick *LegoBrick) {
 func (universe *LegoUniverse) moveBrick(brick *LegoBrick, newPosition Vec3i) {
   validateBrickPosition(newPosition)
   universe.writeBrick(0, brick.Position, brick.Size)
+  debug.Assert(universe.canWriteBrick(brick.Position, brick.Size),
+               "Moving a brick to an area populated by another brick")
   brick.Position = newPosition
+  universe.writeBrick(brick.Bid, brick.Position, brick.Size)
+}
+
+func (universe *LegoUniverse) resizeBrick(brick *LegoBrick, newSize Vec3i) {
+  universe.writeBrick(0, brick.Position, brick.Size)
+  brick.Size = newSize
+  debug.Assert(universe.canWriteBrick(brick.Position, brick.Size),
+               "Resizing a brick to an area populated by another brick")
   universe.writeBrick(brick.Bid, brick.Position, brick.Size)
 }
 
@@ -56,6 +80,25 @@ func (universe *LegoUniverse) deleteBrick(brick *LegoBrick) {
   universe.writeBrick(0, brick.Position, brick.Size)
   delete(universe.bricks, brick.Bid)
   universe.numBricks--
+}
+
+func (universe *LegoUniverse) canWriteBrick(position Vec3i, size Vec3i) bool {
+  validateBrickPosition(position)
+
+  startX, startY, startZ := getGridIndex(position)
+  endX := startX + size.data[0]
+  endY := startY + size.data[1]
+  endZ := startZ + size.data[2]
+  for x := startX; x < endX; x++ {
+    for y := startY; y < endY; y++ {
+      for z := startZ; z < endZ; z++ {
+        if universe.grid[x][y][z] != 0 {
+          return false
+        }
+      }
+    }
+  }
+  return true
 }
 
 func (universe *LegoUniverse) writeBrick(id int64, position Vec3i, size Vec3i) {
