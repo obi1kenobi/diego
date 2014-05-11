@@ -88,13 +88,13 @@ func expectSubmitSuccess(t *testing.T, rs *resolver.Resolver,
   success := true
   ok, newT := rs.SubmitTransaction(op)
   if !ok {
-    t.Errorf("Transaction %s failed to apply on server", debug.Stringify(op))
+    t.Errorf("Transaction %+v failed to apply on server", op)
     success = false
   }
   ok, _ = s.Apply(newT)
   s.SetId(newT.Id() + 1)
   if !ok {
-    t.Errorf("Transaction response %s failed to apply locally", debug.Stringify(newT))
+    t.Errorf("Transaction response %+v failed to apply locally", newT)
     success = false
   }
   return success
@@ -104,7 +104,7 @@ func expectSubmitFailure(t *testing.T, rs *resolver.Resolver,
                          op types.Transaction) bool {
   ok, _ := rs.SubmitTransaction(op)
   if ok {
-    t.Errorf("Transaction %s applied on server when it shouldn't have", debug.Stringify(op))
+    t.Errorf("Transaction %+v applied on server when it shouldn't have", op)
     return false
   }
   return true
@@ -133,7 +133,7 @@ func handleSubmit(t *testing.T, rs *resolver.Resolver,
     ok, _ = s.Apply(newT)
     s.SetId(newT.Id() + 1)
     if !ok {
-      t.Errorf("Transaction response %s failed to apply locally", debug.Stringify(newT))
+      t.Errorf("Transaction response %+v failed to apply locally", newT)
       return false
     }
   }

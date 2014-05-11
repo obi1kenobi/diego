@@ -29,11 +29,11 @@ func TestBasicCrashRestore (t *testing.T) {
 
   c1 := core.CreateDiegoCore(20, makeState, basePath)
   for i := int64(0); i < 10; i++ {
-    success, _ := c1.SubmitTransaction("foo", &appendOp{i, nt(), "a", "b"})
+    success, _ := c1.SubmitTransaction("foo", &appendOp{OpCore{i, nt(), "a", "b"}})
     debug.Assert(success, "transaction set 1-%d did not succeed!", i)
   }
   for i := int64(0); i < 30; i++ {
-    success, _ := c1.SubmitTransaction("bar", &appendOp{i, nt(), "c", "d"})
+    success, _ := c1.SubmitTransaction("bar", &appendOp{OpCore{i, nt(), "c", "d"}})
     debug.Assert(success, "transaction set 2-%d did not succeed!", i)
   }
   core.KillCore(c1)
@@ -51,14 +51,14 @@ func TestNewNamespaceCrashRestore (t *testing.T) {
 
   c1 := core.CreateDiegoCore(20, makeState, basePath)
   for i := int64(0); i < 10; i++ {
-    success, _ := c1.SubmitTransaction("foo", &appendOp{i, nt(), "a", "b"})
+    success, _ := c1.SubmitTransaction("foo", &appendOp{OpCore{i, nt(), "a", "b"}})
     debug.Assert(success, "transaction set 1-%d did not succeed!", i)
   }
   for i := int64(0); i < 30; i++ {
-    success, _ := c1.SubmitTransaction("bar", &appendOp{i, nt(), "c", "d"})
+    success, _ := c1.SubmitTransaction("bar", &appendOp{OpCore{i, nt(), "c", "d"}})
     debug.Assert(success, "transaction set 2-%d did not succeed!", i)
   }
-  success, _ := c1.SubmitTransaction("eggs", &appendOp{0, nt(), "c", "d"})
+  success, _ := c1.SubmitTransaction("eggs", &appendOp{OpCore{0, nt(), "c", "d"}})
   debug.Assert(success, "transaction set 3-%d did not succeed!", 0)
   core.KillCore(c1)
   c2 := core.CreateDiegoCore(20, makeState, basePath)
@@ -75,11 +75,11 @@ func TestDeleteNamespaceCrashRestore (t *testing.T) {
 
   c1 := core.CreateDiegoCore(20, makeState, basePath)
   for i := int64(0); i < 10; i++ {
-    success, _ := c1.SubmitTransaction("foo", &appendOp{i, nt(), "a", "b"})
+    success, _ := c1.SubmitTransaction("foo", &appendOp{OpCore{i, nt(), "a", "b"}})
     debug.Assert(success, "transaction set 1-%d did not succeed!", i)
   }
   for i := int64(0); i < 30; i++ {
-    success, _ := c1.SubmitTransaction("bar", &appendOp{i, nt(), "c", "d"})
+    success, _ := c1.SubmitTransaction("bar", &appendOp{OpCore{i, nt(), "c", "d"}})
     debug.Assert(success, "transaction set 2-%d did not succeed!", i)
   }
   c1.RemoveNamespace("bar")
