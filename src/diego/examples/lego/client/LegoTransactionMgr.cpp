@@ -17,10 +17,17 @@
 #include <sstream>
 
 LegoTransactionMgr::LegoTransactionMgr(LegoUniverse *universe) : 
+    _network(true),
     _universe(universe),
     _xaIds(0),
     _xa(NULL)
 {
+}
+
+void
+LegoTransactionMgr::SetNetworkEnabled(bool enabled)
+{
+    _network = enabled;
 }
 
 void
@@ -34,7 +41,7 @@ void
 LegoTransactionMgr::CloseTransaction()
 {
     assert(_xa != NULL);
-    ExecuteXa(*_xa);
+    _ExecuteXa(*_xa);
     delete _xa;
     _xa = NULL;
 }
@@ -43,17 +50,27 @@ bool
 LegoTransactionMgr::ExecuteOp(const LegoOp &op)
 {
     if (_xa) {
+        // Accumulating ops into a transaction for lazy execution
         _xa->AddOp(op);
         return true;
-    } else {
+    } else if (_network) {
+        // Network is up and active; send transaction as usual
         LegoTransaction xa;
         xa.AddOp(op);
-        return ExecuteXa(xa);
+        bool success = _ExecuteXa(xa);
+        LegoBricksChangedNotice().Send();
+        return success;
+    } else {
+        // Execute locally and keep track of ops we need to send to server
+        _offlineXa.AddOp(op);
+        _ExecuteOp(op);
+        LegoBricksChangedNotice().Send();
+        return true;
     }
 }
 
 bool
-LegoTransactionMgr::ExecuteXa(const LegoTransaction &xa)
+LegoTransactionMgr::_ExecuteXa(const LegoTransaction &xa)
 {
     // Send transaction to server
     std::string response = _SendToServer(xa);
@@ -70,9 +87,17 @@ LegoTransactionMgr::ExecuteXa(const LegoTransaction &xa)
     // Parse response (server log) and execute transactions from it
     std::vector<LegoTransaction> serverLog;
     _ParseResponse(is, &serverLog);
-    _Execute(serverLog);
+    _ExecuteXas(serverLog);
 
     return success;
+}
+
+void
+LegoTransactionMgr::Sync()
+{
+    _ExecuteXa(_offlineXa);
+    _offlineXa.Clear();
+    LegoBricksChangedNotice().Send();
 }
 
 std::string
@@ -211,7 +236,7 @@ LegoTransactionMgr::_SendMessage(const std::string &message)
 }
 
 void
-LegoTransactionMgr::_Execute(const std::vector<LegoTransaction> &xas)
+LegoTransactionMgr::_ExecuteXas(const std::vector<LegoTransaction> &xas)
 {
     if (xas.empty()) {
         return;
@@ -219,43 +244,54 @@ LegoTransactionMgr::_Execute(const std::vector<LegoTransaction> &xas)
 
     int numXas = 0;
     for (const auto &xa : xas) {
+        _ExecuteXaOps(xa);
         ++numXas;
-        const auto &ops = xa.GetOps();
-        for (const auto &op : ops) {
-            switch (op.GetType()) {
-            case LegoOp::CREATE_BRICK: {
-                _universe->_CreateBrick(op.GetPosition(),
-                                        op.GetSize(),
-                                        op.GetOrientation(),
-                                        op.GetColor());
-            } break;
-            case LegoOp::MODIFY_BRICK_POSITION: {
-                LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
-                brick->_SetPosition(op.GetPosition());
-            } break;
-            case LegoOp::MODIFY_BRICK_SIZE: {
-                LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
-                brick->_SetSize(op.GetSize());
-            } break;
-            case LegoOp::MODIFY_BRICK_ORIENTATION: {
-                LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
-                brick->_SetOrientation(op.GetOrientation());
-            } break;
-            case LegoOp::MODIFY_BRICK_COLOR: {
-                LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
-                brick->_SetColor(op.GetColor());
-            } break;
-            case LegoOp::DELETE_BRICK: {
-                LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
-                brick->_Destroy();
-            } break;
-            }
-        }
         _xas.push_back(xa);
         ++_xaIds;
     }
     SfDPrintf(1, "Executed %d transactions\n", numXas);
-    LegoBricksChangedNotice().Send();
+}
+
+void
+LegoTransactionMgr::_ExecuteXaOps(const LegoTransaction &xa)
+{
+    const auto &ops = xa.GetOps();
+    for (const auto &op : ops) {
+        _ExecuteOp(op);
+    }
+}
+
+void
+LegoTransactionMgr::_ExecuteOp(const LegoOp &op)
+{
+    switch (op.GetType()) {
+    case LegoOp::CREATE_BRICK: {
+        _universe->_CreateBrick(op.GetPosition(),
+                                op.GetSize(),
+                                op.GetOrientation(),
+                                op.GetColor());
+    } break;
+    case LegoOp::MODIFY_BRICK_POSITION: {
+        LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
+        brick->_SetPosition(op.GetPosition());
+    } break;
+    case LegoOp::MODIFY_BRICK_SIZE: {
+        LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
+        brick->_SetSize(op.GetSize());
+    } break;
+    case LegoOp::MODIFY_BRICK_ORIENTATION: {
+        LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
+        brick->_SetOrientation(op.GetOrientation());
+    } break;
+    case LegoOp::MODIFY_BRICK_COLOR: {
+        LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
+        brick->_SetColor(op.GetColor());
+    } break;
+    case LegoOp::DELETE_BRICK: {
+        LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
+        brick->_Destroy();
+    } break;
+    }
 }
 
 void
@@ -269,6 +305,10 @@ LegoTransactionMgr::_SkipWhiteSpace(std::istream &input)
 void
 LegoTransactionMgr::CatchupWithServer()
 {
+    if (!_network) {
+        return;
+    }
+
     // Request all transactions since the last one we've executed.
     //
     // Format of request is:
@@ -289,5 +329,7 @@ LegoTransactionMgr::CatchupWithServer()
     std::vector<LegoTransaction> serverLog;
     _ParseResponse(is, &serverLog);
     SfDPrintf(1, "Received %d transactions from server\n", serverLog.size());
-    _Execute(serverLog);
+    _ExecuteXas(serverLog);
+
+    LegoBricksChangedNotice().Send();
 }

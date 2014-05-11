@@ -57,6 +57,8 @@ class LegoBrick {
               Orientation orientation,
               const MfVec3f &color);
 
+    LegoBrick * _Clone();
+
     void _SetPosition(const MfVec3i &position) {
         _position = position;
     }

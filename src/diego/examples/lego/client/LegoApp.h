@@ -41,6 +41,10 @@ class LegoApp {
 
     void PollServer();
 
+    void SetNetworkEnabled(bool enabled);
+
+    bool IsNetworkEnabled() const;
+
     void DumpScenegraph();
 
   private:
