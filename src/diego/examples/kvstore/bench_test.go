@@ -34,7 +34,7 @@ func recentTransactionHarness(rs *resolver.Resolver, b *testing.B) {
   accept := make([]bool, b.N)
   nt := types.MakeRequestTokenGenerator(0)
   for i := 0; i < b.N; i++ {
-    xas[i] = &lwwSetOp{int64(i), nt(), "a", "b"}
+    xas[i] = &lwwSetOp{OpCore{int64(i), nt(), "a", "b"}}
   }
   b.ResetTimer()
 
@@ -83,7 +83,7 @@ func fullLogReadHarness(rs *resolver.Resolver, trailingDist int, b *testing.B) {
   }
 
   for i := 0; i < b.N; i++ {
-    xas[i] = &testAndSetOp{max(0, int64(i-trailingDist)), nt(), strconv.Itoa(i), "b"}
+    xas[i] = &testAndSetOp{OpCore{max(0, int64(i-trailingDist)), nt(), strconv.Itoa(i), "b"}}
   }
   b.ResetTimer()
 

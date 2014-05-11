@@ -44,30 +44,30 @@ func generateValue(rnd *rand.Rand) string {
 
 func generateRandomLwwSet(rnd *rand.Rand, tok types.RequestToken)(types.Transaction, tests.TransactionResult) {
   // set the transaction id to 0 because it will be set dynamically during the test
-  return &lwwSetOp{0, tok,
-                   generateKey(rnd),
-                   generateValue(rnd)}, tests.Success
+  return &lwwSetOp{OpCore{0, tok,
+                          generateKey(rnd),
+                          generateValue(rnd)}}, tests.Success
 }
 
 func generateRandomPessimisticSet(rnd *rand.Rand, tok types.RequestToken)(types.Transaction, tests.TransactionResult) {
   // set the transaction id to 0 because it will be set dynamically during the test
-  return &pessimisticSetOp{0, tok,
-                           generateKey(rnd),
-                           generateValue(rnd)}, tests.NoCheck
+  return &pessimisticSetOp{OpCore{0, tok,
+                                  generateKey(rnd),
+                                  generateValue(rnd)}}, tests.NoCheck
 }
 
 func generateRandomTestAndSet(rnd *rand.Rand, tok types.RequestToken)(types.Transaction, tests.TransactionResult) {
   // set the transaction id to 0 because it will be set dynamically during the test
-  return &testAndSetOp{0, tok,
-                       generateKey(rnd),
-                       generateValue(rnd)}, tests.NoCheck
+  return &testAndSetOp{OpCore{0, tok,
+                              generateKey(rnd),
+                              generateValue(rnd)}}, tests.NoCheck
 }
 
 func generateRandomAppend(rnd *rand.Rand, tok types.RequestToken)(types.Transaction, tests.TransactionResult) {
   // set the transaction id to 0 because it will be set dynamically during the test
-  return &appendOp{0, tok,
-                   generateKey(rnd),
-                   generateValue(rnd)}, tests.NoCheck
+  return &appendOp{OpCore{0, tok,
+                          generateKey(rnd),
+                          generateValue(rnd)}}, tests.NoCheck
 }
 
 func makeTestData(data []tests.TestDataItem, rnd *rand.Rand) {
