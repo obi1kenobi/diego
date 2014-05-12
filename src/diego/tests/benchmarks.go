@@ -6,6 +6,7 @@ import "strconv"
 import "testing"
 import "time"
 import "diego/types"
+import "diego/debug"
 import "diego/core"
 
 type ClientRequest struct {
@@ -70,14 +71,12 @@ func MakeParallelClient(clientId int, requests []ClientRequest) ClientFunc {
     for _, request := range requests {
       request.Xa.SetId(stateIds[request.Ns])
       success, newXas := diego.SubmitTransaction(request.Ns, request.Xa)
-      if !success {
+      for !success {
         stateIds[request.Ns], _ = diego.CurrentStateId(request.Ns)
         request.Xa.SetId(stateIds[request.Ns])
         success, newXas = diego.SubmitTransaction(request.Ns, request.Xa)
-        if !success {
-          b.Fatalf("Resubmit transaction failed: %+v", request)
-        }
       }
+      debug.Assert(len(newXas) > 0, "%v, %v", newXas,  success)
       stateIds[request.Ns] = newXas[len(newXas)-1].Id()
     }
 
