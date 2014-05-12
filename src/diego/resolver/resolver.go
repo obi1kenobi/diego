@@ -143,7 +143,7 @@ func (rs *Resolver) TransactionsSinceId(id int64) (int64, []types.Transaction) {
 
   sid := rs.currentState.Id()
   tcount := sid - id
-  if tcount <= 0 {
+  if tcount <= 0 || id < rs.trailingState.Id() {
     return sid, nil
   }
 
