@@ -85,11 +85,24 @@ bool
 LegoUniverse::_IsValid(const LegoOp &op)
 {
     LegoOp::Type opType = op.GetType();
-    if (opType == LegoOp::CREATE_BRICK || 
+    if (opType == LegoOp::CREATE_BRICK ||
         opType == LegoOp::MODIFY_BRICK_POSITION || 
         opType == LegoOp::MODIFY_BRICK_SIZE) {
-        const MfVec3i &pos = op.GetPosition();
-        const MfVec3i &size = op.GetSize();
+        MfVec3i pos = op.GetPosition();
+        MfVec3i size = op.GetSize();
+        if (opType != LegoOp::CREATE_BRICK) {
+            auto it = _brickMap.find(op.GetBrickID());
+            if (it == _brickMap.end()) {
+                return false;
+            }
+            LegoBrick *brick = it->second;
+            if (opType == LegoOp::MODIFY_BRICK_POSITION) {
+                size = brick->GetSize();
+            }
+            if (opType == LegoOp::MODIFY_BRICK_SIZE) {
+                pos = brick->GetPosition();
+            }
+        }
         for (int i = 0; i < 3; ++i) {
             if (pos[i] < _gridMin[i]) {
                 return false;

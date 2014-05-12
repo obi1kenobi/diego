@@ -134,7 +134,9 @@ LegoMainWindow::_ImportModels()
 void
 LegoMainWindow::_PollServer()
 {
-    _app->PollServer();
+    if (_app) {
+        _app->PollServer();
+    }
 }
 
 void
