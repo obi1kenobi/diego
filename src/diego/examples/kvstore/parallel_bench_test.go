@@ -8,7 +8,8 @@ import "diego/types"
 import "diego/tests"
 import "diego/core"
 
-const durablePath = "../../../../_test/bench_kvstore"
+const durablePath = ""
+//const durablePath = "../../../../_test/bench_kvstore"
 
 func makeKVCoreFactory(trailingDistance int) func()*core.DiegoCore{
   return func()*core.DiegoCore {

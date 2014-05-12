@@ -141,6 +141,11 @@ func (rs *Resolver) TransactionsSinceId(id int64) (int64, []types.Transaction) {
     return 0, nil
   }
 
+  return rs.transactionsSinceIdLockless(id)
+}
+
+func (rs *Resolver) transactionsSinceIdLockless(id int64) (int64, []types.Transaction) {
+
   sid := rs.currentState.Id()
   tcount := sid - id
   if tcount <= 0 || id < rs.trailingState.Id() {
@@ -155,6 +160,22 @@ func (rs *Resolver) TransactionsSinceId(id int64) (int64, []types.Transaction) {
     transactions[i - id] = elem.Value.(types.Transaction)
   }
   return sid, transactions
+}
+
+/*
+SubmitAndGetSince - composition of SubmitTransaction and TransactionsSinceId
+*/
+func (rs *Resolver) SubmitAndGetSince (t types.Transaction) (bool, []types.Transaction) {
+  rs.mu.Lock()
+  defer rs.mu.Unlock()
+
+  if rs.closed {
+    return false, nil
+  }
+
+  ok, _ := rs.submitTransactionLockless(t, true)
+  _, xas := rs.transactionsSinceIdLockless(t.Id())
+  return ok, xas
 }
 
 /*

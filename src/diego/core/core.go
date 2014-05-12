@@ -133,9 +133,7 @@ SubmitTransaction - submits the specified transaction to the specified namespace
 */
 func (dc *DiegoCore) SubmitTransaction(ns string, t types.Transaction) (bool, []types.Transaction) {
   rs := dc.robustGetNamespace(ns)
-  tid := t.Id()
-  ok, _ := rs.SubmitTransaction(t)
-  _, transactions := rs.TransactionsSinceId(tid)
+  ok, transactions := rs.SubmitAndGetSince(t)
   return ok, transactions
 }
 
