@@ -11,9 +11,10 @@ func setup()(*resolver.Resolver, *LegoUniverse) {
   return resolver.CreateResolver(MakeState, trailingDistance, ""), MakeState().(*LegoUniverse)
 }
 
-func makeTransaction(id int64, ops []*LegoOp) *LegoTransaction {
+func makeTransaction(id int64, token types.RequestToken, ops []*LegoOp) *LegoTransaction {
   xa := &LegoTransaction{}
   xa.Tid = id
+  xa.Token = token
   xa.Ops = ops
   return xa
 }
@@ -200,9 +201,10 @@ func TestCreateOp(t *testing.T) {
 
   // Prepare tests
   testData := make([]tests.TestDataItem, len(xas))
+  nt := types.MakeRequestTokenGenerator(0)
   for index, xa := range xas {
     testData[index] =
-      tests.MakeTestDataItem(makeTransaction(xaIds[index], xa),
+      tests.MakeTestDataItem(makeTransaction(xaIds[index], nt(), xa),
                              expectedResult[index],
                              legoCreatePredicate(expectedResult[index], xas[index]))
   }
@@ -288,10 +290,11 @@ func TestModifyOp(t *testing.T) {
   }
 
   // Prepare tests
+  nt := types.MakeRequestTokenGenerator(0)
   testData := make([]tests.TestDataItem, len(xas))
   for index, xa := range xas {
     testData[index] =
-      tests.MakeTestDataItem(makeTransaction(xa.id, xa.ops),
+      tests.MakeTestDataItem(makeTransaction(xa.id, nt(), xa.ops),
                              xa.expected,
                              legoModifyPredicate(xa.expected, xa.ops))
   }

@@ -22,9 +22,15 @@ Failure - we expect the transaction to fail
 const Failure TransactionResult = -1
 
 /*
+SuccessLost - server successfully applied transaction, but reply is lost and is not applied locally
+*/
+const SuccessLost TransactionResult = 2
+
+/*
 NoCheck - we don't know whether the transaction will succeed or not
 */
 const NoCheck TransactionResult = 0
+
 
 /*
 TestDataItem -
@@ -50,10 +56,15 @@ func MakeTestDataItem(op types.Transaction, success TransactionResult,
   return TestDataItem{op, success, localStatePredicate}
 }
 
-func randomizeTransactionId(op types.Transaction, rnd *rand.Rand) {
+func randomizeTransactionId(op types.Transaction, lowerBound int64, rnd *rand.Rand) {
   maxId := op.Id() - 1
   if maxId > 0 {
-    op.SetId(rnd.Int63n(maxId))
+    potential := rnd.Int63n(maxId)
+    if potential < lowerBound {
+      op.SetId(lowerBound)
+    } else {
+      op.SetId(potential)
+    }
   } else if maxId == 0 {
     op.SetId(0)
   }
@@ -77,13 +88,13 @@ func expectSubmitSuccess(t *testing.T, rs *resolver.Resolver,
   success := true
   ok, newT := rs.SubmitTransaction(op)
   if !ok {
-    t.Errorf("Transaction %s failed to apply on server", debug.Stringify(op))
+    t.Errorf("Transaction %+v failed to apply on server", op)
     success = false
   }
   ok, _ = s.Apply(newT)
   s.SetId(newT.Id() + 1)
   if !ok {
-    t.Errorf("Transaction response %s failed to apply locally", debug.Stringify(newT))
+    t.Errorf("Transaction response %+v failed to apply locally", newT)
     success = false
   }
   return success
@@ -93,10 +104,21 @@ func expectSubmitFailure(t *testing.T, rs *resolver.Resolver,
                          op types.Transaction) bool {
   ok, _ := rs.SubmitTransaction(op)
   if ok {
-    t.Errorf("Transaction %s applied on server when it shouldn't have", debug.Stringify(op))
+    t.Errorf("Transaction %+v applied on server when it shouldn't have", op)
     return false
   }
   return true
+}
+
+func expectSubmitSuccessLost(t *testing.T, rs *resolver.Resolver,
+                       op types.Transaction) bool {
+  success := true
+  ok, _ := rs.SubmitTransaction(op)
+  if !ok {
+    t.Errorf("Transaction %s failed to apply on server", debug.Stringify(op))
+    success = false
+  }
+  return success
 }
 
 func handleSubmit(t *testing.T, rs *resolver.Resolver,
@@ -106,7 +128,7 @@ func handleSubmit(t *testing.T, rs *resolver.Resolver,
     ok, _ = s.Apply(newT)
     s.SetId(newT.Id() + 1)
     if !ok {
-      t.Errorf("Transaction response %s failed to apply locally", debug.Stringify(newT))
+      t.Errorf("Transaction response %+v failed to apply locally", newT)
       return false
     }
   }
@@ -121,6 +143,8 @@ func expectSubmitResult(t *testing.T, rs *resolver.Resolver,
     return expectSubmitSuccess(t, rs, op, s)
   case Failure:
     return expectSubmitFailure(t, rs, op)
+  case SuccessLost:
+    return expectSubmitSuccessLost(t, rs, op)
   default:
     return handleSubmit(t, rs, op, s)
   }
