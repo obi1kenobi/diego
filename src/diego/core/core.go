@@ -12,6 +12,23 @@ import "diego/resolver"
 import "diego/namespace"
 
 /*
+AssertCoresEqual - assert that two diego cores have the same information.
+  Useful for durability tests
+*/
+func AssertCoresEqual (dc1, dc2 *DiegoCore,
+                       stateEquals func(a, b types.State)bool,
+                       transactionEquals func(a, b types.Transaction)bool) {
+  namespace.AssertNamespacesEqual(dc1.nsManager, dc2.nsManager, stateEquals, transactionEquals)
+}
+
+/*
+KillCore - lock down a core - should be equivalent to crasing
+*/
+func KillCore (dc *DiegoCore) {
+  namespace.CloseAllNamespaces(dc.nsManager)
+}
+
+/*
 DiegoCore - the main object of the Diego conflict resolution framework.
 */
 type DiegoCore struct {
@@ -62,6 +79,7 @@ func (dc *DiegoCore) loadDurableNamespaces() {
       if err != nil {
         debug.DPrintf(0, "Couldn't load namespace with non-base64 name %s", f.Name())
       } else {
+        debug.DPrintf(1, "Reading in namespace %s.", ns)
         dc.robustGetNamespace(ns)
       }
     }
