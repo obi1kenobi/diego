@@ -1,6 +1,7 @@
 #include "LegoOps.h"
 
 #include <exception>
+#include <iostream>
 
 #include <assert.h>
 
@@ -10,6 +11,7 @@ LegoOp::LegoOp(std::istream &is)
     std::string type;
     is >> type;
     LegoOp *op = NULL;
+    std::cerr << "Op type is: " << type << std::endl;
     if (type == "CreateBrick") {
         _type = CREATE_BRICK;
         is >> _position;
