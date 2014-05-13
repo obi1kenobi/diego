@@ -23,12 +23,12 @@ func makeKVTestTransaction (token types.RequestToken, rand *rand.Rand) types.Tra
 
 func BenchmarkParallelBasic(b *testing.B) {
   config := tests.BenchmarkConfig{}
-  config.DurablePath          = noLogging
+  config.DurablePath          = logging
   config.MakeCore             = makeKVCoreFactory(250, config.DurablePath)
   config.MakeTransaction      = makeKVTestTransaction
-  config.NumNamespaces        = 2
+  config.NumNamespaces        = 1
   config.RandomNamespacing    = true
-  config.NumClients           = 1
+  config.NumClients           = 4
   config.NumRequestsPerClient = b.N
   tests.ParallelClientBenchmarks(config, b)
 }
