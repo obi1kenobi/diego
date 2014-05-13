@@ -99,7 +99,9 @@ func (dc *DiegoCore) makeResolverDurablePath(ns string) string {
 func (dc *DiegoCore) robustGetNamespace(ns string) *resolver.Resolver {
   rs, ok := dc.nsManager.GetNamespace(ns)
   if !ok {
-    rs = resolver.CreateResolver(dc.makeState, dc.trailingDistance, dc.makeResolverDurablePath(ns))
+    for rs == nil {
+      rs = dc.robustHackCreateResolver(ns)
+    }
     for !ok {
       ok = dc.nsManager.CreateNamespace(ns, rs)
       if !ok {
@@ -111,6 +113,16 @@ func (dc *DiegoCore) robustGetNamespace(ns string) *resolver.Resolver {
     }
   }
   return rs
+}
+
+func (dc *DiegoCore) robustHackCreateResolver(ns string) (rs *resolver.Resolver) {
+  defer func () {
+    if r := recover(); r != nil {
+      debug.DPrintf(0, "%v", r)
+      rs = nil
+    }
+  }()
+  return resolver.CreateResolver(dc.makeState, dc.trailingDistance, dc.makeResolverDurablePath(ns))
 }
 
 /*
