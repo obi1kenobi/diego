@@ -24,7 +24,7 @@ func main() {
 }
 
 func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
-  debug.DPrintf(2, "Begin callback")
+  debug.DPrintf(3, "Begin callback")
 
   b, err := ioutil.ReadAll(r.Body)
   debug.EnsureNoError(err)
@@ -35,7 +35,7 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
 
   buf := bytes.NewBuffer(b)
 
-  debug.DPrintf(1, "Got message: %v\n", buf)
+  debug.DPrintf(2, "Got message: %v\n", buf)
 
   command, err := buf.ReadString('\n')
   debug.EnsureNoError(err)
@@ -61,5 +61,5 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
   _, err = resultBuf.WriteTo(w)
   debug.EnsureNoError(err)
 
-  debug.DPrintf(2, "End callback\n")
+  debug.DPrintf(3, "End callback\n")
 }

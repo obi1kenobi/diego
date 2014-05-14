@@ -20,7 +20,9 @@ LegoApp::LegoApp(LegoMainWindow *mainWindow) :
     _sceneRoot(NULL),
     _platformRoot(NULL),
     _flashAlarm(NULL),
-    _flash(false)
+    _flash(false),
+    _shiftDown(false),
+    _ctrlDown(false)
 {
     // Initialize the SoQt library first. 
     SoDB::init();
@@ -646,48 +648,137 @@ LegoApp::_EventCB(void *userData, SoEventCallback *eventCB)
             This->_universe->ClearSelection();
             LegoBricksChangedNotice().Send();
         } break;
+        case SoKeyboardEvent::LEFT_SHIFT:
+        case SoKeyboardEvent::RIGHT_SHIFT:
+            This->_shiftDown = true;
+            break;
+        case SoKeyboardEvent::LEFT_CONTROL:
+        case SoKeyboardEvent::RIGHT_CONTROL:
+        case SoKeyboardEvent::LEFT_ALT:
+        case SoKeyboardEvent::RIGHT_ALT:
+            This->_ctrlDown = true;
+            break;
         default:
             break;
         }
         eventCB->setHandled();
+    } else if (SO_KEY_RELEASE_EVENT(event, ANY)) {
+        const SoKeyboardEvent *keyEvent = 
+            dynamic_cast<const SoKeyboardEvent*>(event);
+        SoKeyboardEvent::Key key = keyEvent->getKey();
+        switch (key) {
+        case SoKeyboardEvent::LEFT_SHIFT:
+        case SoKeyboardEvent::RIGHT_SHIFT:
+            This->_shiftDown = false;
+            break;
+        case SoKeyboardEvent::LEFT_CONTROL:
+        case SoKeyboardEvent::RIGHT_CONTROL:
+        case SoKeyboardEvent::LEFT_ALT:
+        case SoKeyboardEvent::RIGHT_ALT:
+            This->_ctrlDown = false;
+            break;
+        default:
+            break;
+        }
     } else if (SO_MOUSE_PRESS_EVENT(event, BUTTON1)) {
-        std::cerr << "Mouse 1\n";
-
-        std::cerr << "Pick info from event callback:\n";
         const SoPickedPoint *pickedPoint = eventCB->getPickedPoint();
 
-        This->_HandlePick(pickedPoint);
+        if (This->_shiftDown) {
+            // Create brick
+            This->_HandleCreate(pickedPoint);
+        } else if (This->_ctrlDown) {
+            // Delete brick
+            This->_HandleDelete(pickedPoint);
+        } else {
+            // Select brick
+            This->_HandleSelect(pickedPoint);
+        }
 
         eventCB->setHandled();
     } else if (SO_MOUSE_PRESS_EVENT(event, BUTTON2)) {
-        std::cerr << "Mouse 2\n";
         eventCB->setHandled();
     } else if (SO_MOUSE_PRESS_EVENT(event, BUTTON3)) {
-        std::cerr << "Mouse 3\n";
         eventCB->setHandled();
     }
 }
 
+static
+MfVec3d
+_GetPickCenter(const SoPickedPoint *pickedPoint)
+{
+    const SbVec3f &point = pickedPoint->getPoint();
+    SbVec3f normal = pickedPoint->getNormal();
+
+    normal.normalize();
+    MfVec3d centerPoint = 
+        MfVec3d(point[0], point[1], point[2]) - 
+        MfVec3d(normal[0], normal[1], normal[2]) * 0.5;
+    return centerPoint;
+}
+
 void
-LegoApp::_HandlePick(const SoPickedPoint *pickedPoint)
+LegoApp::_HandleSelect(const SoPickedPoint *pickedPoint)
 {
     if (pickedPoint) {
-        const SbVec3f &point = pickedPoint->getPoint();
-        SbVec3f normal = pickedPoint->getNormal();
-        std::cerr << "  Point:  " << point[0] << ", " << point[1] << ", " << point[2] << std::endl;
-        std::cerr << "  Normal: " << normal[0] << ", " << normal[1] << ", " << normal[2] << std::endl;
-
-        normal.normalize();
-        MfVec3d selPoint = 
-            MfVec3d(point[0], point[1], point[2]) - 
-            MfVec3d(normal[0], normal[1], normal[2]) * 0.5;
-        if (selPoint[2] < 0.0) {
+        MfVec3d centerPoint = _GetPickCenter(pickedPoint);
+        if (centerPoint[2] < 0.0) {
             _universe->ClearSelection();
         } else {
-            _universe->Select(selPoint);
+            LegoBrick *brick = _universe->GetBrick(centerPoint);
+            _universe->Select(brick);
         }
     } else {
         _universe->ClearSelection();
     }
+
+    LegoBricksChangedNotice().Send();
+}
+
+void
+LegoApp::_HandleCreate(const SoPickedPoint *pickedPoint)
+{
+    if (!pickedPoint) {
+        return;
+    }
+
+    MfVec3i position;
+
+    MfVec3d centerPoint = _GetPickCenter(pickedPoint);
+    if (centerPoint[2] < 0.0) {
+        // Add on ground plane
+        position = MfVec3i(centerPoint[0] - 1, centerPoint[1] - 1, 0);
+    } else {
+        LegoBrick *brick = _universe->GetBrick(centerPoint);
+        assert(brick);
+        position = brick->GetPosition() + MfVec3i(0, 0, 1);
+    }
+
+    LegoUniverse::Color colorIndex = 
+        (LegoUniverse::Color) (drand48() * LegoUniverse::NUM_COLORS);
+    MfVec3f brickColor = LegoUniverse::COLORS[colorIndex];
+    _universe->CreateBrick(position, MfVec3i(2, 2, 1), LegoBrick::EAST, brickColor);
+
+    LegoBricksChangedNotice().Send();
+}
+
+void
+LegoApp::_HandleDelete(const SoPickedPoint *pickedPoint)
+{
+    if (!pickedPoint) {
+        return;
+    }
+
+    MfVec3i position;
+
+    MfVec3d centerPoint = _GetPickCenter(pickedPoint);
+    if (centerPoint[2] < 0.0) {
+        // Ground plane
+        return;
+    }
+
+    LegoBrick *brick = _universe->GetBrick(centerPoint);
+    assert(brick);
+    brick->Destroy();
+
     LegoBricksChangedNotice().Send();
 }

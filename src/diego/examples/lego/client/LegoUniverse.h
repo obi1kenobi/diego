@@ -16,7 +16,10 @@ class LegoUniverse {
         BLUE,
         YELLOW,
         WHITE,
+        NUM_COLORS,
     };
+
+    static MfVec3f COLORS[NUM_COLORS];
 
     typedef std::unordered_set<uint64_t> SelectionMap;
 
@@ -61,7 +64,9 @@ class LegoUniverse {
     // Restore from snap shot
     void Restore();
 
-    bool Select(const MfVec3d &point);
+    LegoBrick * GetBrick(const MfVec3d &point);
+
+    void Select(LegoBrick *brick);
 
     void ClearSelection();
 
@@ -82,11 +87,19 @@ class LegoUniverse {
                       const MfVec3f &color);
 
     void _WriteGrid(const MfVec3i &pos, uint64_t brickID) {
-        _grid[_GetIndex(pos)] = brickID;
+        size_t index = _GetIndex(pos);
+        if (index != size_t(-1)) {
+            _grid[index] = brickID;
+        }
     }
 
     uint64_t _ReadGrid(const MfVec3i &pos) const {
-        return _grid[_GetIndex(pos)];
+        size_t index = _GetIndex(pos);
+        if (index == size_t(-1)) {
+            return size_t(-1);
+        } else {
+            return _grid[index];
+        }
     }
 
     inline size_t _GetIndex(const MfVec3i &pos) const {
@@ -111,6 +124,9 @@ class LegoUniverse {
     void _WriteBrick(const MfVec3i &position, 
                      const MfVec3i &size, 
                      uint64_t brickID);
+
+    bool _IsAvailable(const MfVec3i &position,
+                      const MfVec3i &size);
 
     struct _State {
         _State() : valid(false) {}

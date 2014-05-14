@@ -6,14 +6,13 @@
 
 #include <iostream>
 
-static MfVec3f _gColors[] = {
+MfVec3f LegoUniverse::COLORS[LegoUniverse::NUM_COLORS] = {
     MfVec3f(1, 0, 0),
     MfVec3f(0, 1, 0),
     MfVec3f(0, 0, 1),
     MfVec3f(1, 1, 0),
     MfVec3f(1, 1, 1),
 };
-static int _gNumColors = sizeof(_gColors) / sizeof(_gColors[0]);
 
 LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
     _id(0),
@@ -141,7 +140,9 @@ LegoUniverse::CreateBrick(const MfVec3i &position,
                           LegoBrick::Orientation orientation,
                           const MfVec3f &color)
 {
-    // XXX: validate that a brick can be inserted at given location
+    if (!_IsAvailable(position, size)) {
+        return false;
+    }
 
     // Create transaction and send to server
     LegoOp op = LegoOp::MakeCreateOp(position, size, orientation, color);
@@ -200,6 +201,26 @@ LegoUniverse::_WriteBrick(const MfVec3i &position,
             }
         }
     }
+}
+
+bool
+LegoUniverse::_IsAvailable(const MfVec3i &position,
+                           const MfVec3i &size)
+{
+    
+    for (int xs = 0; xs < size[0]; ++xs) {
+        for (int ys = 0; ys < size[1]; ++ys) {
+            for (int zs = 0; zs < size[2]; ++zs) {
+                MfVec3i pos(position[0] + xs, position[1] + ys, position[2] + zs);
+                uint64_t brickID = _ReadGrid(pos);
+                if (brickID > 0) {
+                    return false;
+                }
+            }
+        }
+    }
+    
+    return true;
 }
 
 LegoBrick *
@@ -267,8 +288,8 @@ LegoUniverse::Clear()
     _grid.assign(_gridSize[0] * _gridSize[1] * _gridSize[2], 0);
 }
 
-bool
-LegoUniverse::Select(const MfVec3d &point)
+LegoBrick *
+LegoUniverse::GetBrick(const MfVec3d &point)
 {
     for (LegoBrick *brick : _bricks) {
         const MfVec3i &minPoint = brick->GetPosition();
@@ -278,13 +299,17 @@ LegoUniverse::Select(const MfVec3d &point)
             inside = inside && point[i] >= minPoint[i] && point[i] <= maxPoint[i];
         }
         if (inside) {
-            _selection.insert(brick->GetID());
-            std::cerr << "Selected brick id #" << brick->GetID() << std::endl;
-            return true;
+            return brick;
         }
     }
 
-    return false;
+    return NULL;
+}
+
+void
+LegoUniverse::Select(LegoBrick *brick)
+{
+    _selection.insert(brick->GetID());
 }
 
 void
@@ -296,12 +321,12 @@ LegoUniverse::ClearSelection()
 void
 LegoUniverse::ModifyColorForSelectedBricks(Color color)
 {
-    if (color >= 0 && color < _gNumColors) {
+    if (color >= 0 && color < NUM_COLORS) {
         _xaMgr.OpenTransaction();
         for (auto brickID : _selection) {
             LegoBrick *brick = GetBrick(brickID);
             assert(brick);
-            brick->SetColor(_gColors[color]);
+            brick->SetColor(LegoUniverse::COLORS[color]);
         }
         _xaMgr.CloseTransaction();
     }

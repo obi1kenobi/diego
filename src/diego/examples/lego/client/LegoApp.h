@@ -91,7 +91,11 @@ class LegoApp {
 
     static void _EventCB(void *userData, SoEventCallback *eventCB);
 
-    void _HandlePick(const SoPickedPoint *pickedPoint);
+    void _HandleSelect(const SoPickedPoint *pickedPoint);
+
+    void _HandleCreate(const SoPickedPoint *pickedPoint);
+
+    void _HandleDelete(const SoPickedPoint *pickedPoint);
 
     std::vector<SfNoticeMgr::Key> _noticeKeys;
 
@@ -127,6 +131,8 @@ class LegoApp {
     SoIndexedFaceSet           *_brickIFS;
     SoAlarmSensor              *_flashAlarm;
     bool                        _flash;
+    bool                        _shiftDown;
+    bool                        _ctrlDown;
 };
 
 #endif // __LEGO_APP_H__
