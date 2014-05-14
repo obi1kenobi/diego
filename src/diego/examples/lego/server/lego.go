@@ -18,7 +18,8 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
                    "Creating a brick in area populated by another brick")
 
       universe.numBricks++
-      brickId := universe.numBricks
+      universe.brickID++
+      brickId := universe.brickID
 
       brick := &LegoBrick {
         brickId, op.Position, op.Size, op.Orientation, op.Color,

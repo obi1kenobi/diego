@@ -11,6 +11,7 @@ type LegoUniverse struct {
   id int64
   bricks map[int64]*LegoBrick
   numBricks int64
+  brickID int64
   grid [][][]int64
 }
 
