@@ -331,8 +331,11 @@ LegoApp::_DrawBackground()
     if (_flash) {
         tc = MfVec3f(1.0);
         bc = MfVec3f(1.0);
-    } else {
+    } else if (IsNetworkEnabled()) {
         tc = MfVec3f(116.0f / 255.0f, 146.0f / 255.0f, 164.0f / 255.0f);
+        bc = MfVec3f( 24.0f / 255.0f,  27.0f / 255.0f,  29.0f / 255.0f);
+    } else {
+        tc = MfVec3f(0.8, 0.1, 0.1);
         bc = MfVec3f( 24.0f / 255.0f,  27.0f / 255.0f,  29.0f / 255.0f);
     }
 
@@ -592,6 +595,7 @@ void
 LegoApp::SetNetworkEnabled(bool enabled)
 {
     _universe->SetNetworkEnabled(enabled);
+    _viewers[0]->scheduleRedraw();
 }
 
 bool
