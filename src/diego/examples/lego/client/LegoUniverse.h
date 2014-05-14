@@ -27,7 +27,7 @@ class LegoUniverse {
 
     ~LegoUniverse();
 
-    void Clear();
+    void NewUniverse();
 
     uint64_t GetID() const {
         return _id;
@@ -80,6 +80,8 @@ class LegoUniverse {
     friend class LegoTransactionMgr;
 
     typedef std::unordered_map<uint64_t, LegoBrick*> _BrickMap;
+
+    void _Clear();
 
     void _CreateBrick(const MfVec3i &position,
                       const MfVec3i &size,

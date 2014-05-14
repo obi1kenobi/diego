@@ -33,6 +33,9 @@ class LegoMainWindow : public QMainWindow
     void _DumpScenegraph();
     void _PollServer();
     void _SetNetworkEnabled(bool enabled);
+    void _SelectMode();
+    void _ViewMode();
+    void _NewUniverse();
 
   private:
     void _RegisterNoticeHandlers();

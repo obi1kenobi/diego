@@ -42,7 +42,7 @@ LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
 
 LegoUniverse::~LegoUniverse()
 {
-    Clear();
+    _Clear();
 }
 
 void
@@ -161,6 +161,7 @@ LegoUniverse::_CreateBrick(const MfVec3i &position,
     uint64_t brickID = _brickID;
     LegoBrick *brick = 
         new LegoBrick(this, brickID, position, size, orientation, color);
+    std::cerr << "Created brick id " << _brickID << std::endl;
     _RecordBrick(brick);
 }
 
@@ -185,6 +186,7 @@ LegoUniverse::_DestroyBrick(LegoBrick *brick)
     _brickMap.erase(brick->GetID());
     _selection.erase(brick->GetID());
     _WriteBrick(brick->GetPosition(), brick->GetSize(), 0);
+    std::cerr << "Destroyed brick id " << brick->GetID() << std::endl;
     delete brick;
 }
 
@@ -266,7 +268,7 @@ LegoUniverse::Restore()
         return;
     }
 
-    Clear();
+    _Clear();
 
     _id = _snapshot.id;
     _grid = _snapshot.grid;
@@ -278,13 +280,14 @@ LegoUniverse::Restore()
 }
 
 void
-LegoUniverse::Clear()
+LegoUniverse::_Clear()
 {
     for (auto *brick : _bricks) {
         delete brick;
     }
     _bricks.clear();
     _brickMap.clear();
+    _selection.clear();
     _grid.assign(_gridSize[0] * _gridSize[1] * _gridSize[2], 0);
 }
 
@@ -330,4 +333,18 @@ LegoUniverse::ModifyColorForSelectedBricks(Color color)
         }
         _xaMgr.CloseTransaction();
     }
+}
+
+void
+LegoUniverse::NewUniverse()
+{
+    _xaMgr.OpenTransaction();
+
+    // Have to copy container because destroy will end up modifying _bricks
+    auto bricks = _bricks;
+    for (auto *brick : bricks) {
+        brick->Destroy();
+    }
+
+    _xaMgr.CloseTransaction();
 }

@@ -141,7 +141,7 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionNewProject"/>
+    <addaction name="actionNewUniverse"/>
     <addaction name="separator"/>
     <addaction name="actionOpenProject"/>
     <addaction name="actionSaveProject"/>
@@ -418,9 +418,9 @@
     <string>Backface Culling</string>
    </property>
   </action>
-  <action name="actionNewProject">
+  <action name="actionNewUniverse">
    <property name="text">
-    <string>New Project</string>
+    <string>New Universe</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>

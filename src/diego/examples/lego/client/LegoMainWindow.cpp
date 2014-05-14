@@ -35,9 +35,18 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     connect(_ui->opBox, 
             SIGNAL(returnPressed()), this, 
             SLOT(_NewOp()));
+    connect(_ui->actionNewUniverse,
+            SIGNAL(triggered(bool)), this,
+            SLOT(_NewUniverse()));
     connect(_ui->actionImportModels,
             SIGNAL(triggered(bool)), this,
             SLOT(_ImportModels()));
+    connect(_ui->actionSelect,
+            SIGNAL(triggered(bool)), this,
+            SLOT(_SelectMode()));
+    connect(_ui->actionView,
+            SIGNAL(triggered(bool)), this,
+            SLOT(_ViewMode()));
     connect(_ui->actionDumpScenegraph,
             SIGNAL(triggered(bool)), this,
             SLOT(_DumpScenegraph()));
@@ -173,4 +182,22 @@ LegoMainWindow::_ProcessTransactionProcessedNotice(
 {
     _ui->logTextEdit->moveCursor(QTextCursor::End);
     _ui->logTextEdit->insertPlainText(n.Get().c_str());
+}
+
+void
+LegoMainWindow::_SelectMode()
+{
+    _app->SetViewerMode(LegoApp::VIEWER_MODE_SELECT);
+}
+
+void
+LegoMainWindow::_ViewMode()
+{
+    _app->SetViewerMode(LegoApp::VIEWER_MODE_VIEW);
+}
+
+void
+LegoMainWindow::_NewUniverse()
+{
+    _app->NewUniverse();
 }

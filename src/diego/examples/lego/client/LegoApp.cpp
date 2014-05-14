@@ -782,3 +782,24 @@ LegoApp::_HandleDelete(const SoPickedPoint *pickedPoint)
 
     LegoBricksChangedNotice().Send();
 }
+
+void
+LegoApp::SetViewerMode(ViewerMode viewerMode)
+{
+    switch (viewerMode) {
+    case VIEWER_MODE_SELECT:
+        _viewers[0]->setViewing(false);
+        break;
+    case VIEWER_MODE_VIEW:
+        _viewers[0]->setViewing(true);
+        break;
+    default:
+        break;
+    }
+}
+
+void
+LegoApp::NewUniverse()
+{
+    _universe->NewUniverse();
+}

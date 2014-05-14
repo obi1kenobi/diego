@@ -28,6 +28,11 @@ class SoSensor;
 
 class LegoApp {
   public:
+     enum ViewerMode {
+       VIEWER_MODE_SELECT,
+       VIEWER_MODE_VIEW,
+     };
+
     LegoApp(LegoMainWindow *mainWindow);
 
     ~LegoApp();
@@ -37,6 +42,8 @@ class LegoApp {
     const std::vector<QWidget*> & GetViewerWidgets() const {
         return _viewerWidgets;
     }
+
+    void NewUniverse();
 
     bool ProcessOp(const std::string &op);
 
@@ -49,6 +56,8 @@ class LegoApp {
     void SetNetworkEnabled(bool enabled);
 
     bool IsNetworkEnabled() const;
+
+    void SetViewerMode(ViewerMode viewerMode);
 
     void DumpScenegraph();
 
