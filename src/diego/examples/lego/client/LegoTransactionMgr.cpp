@@ -279,6 +279,9 @@ LegoTransactionMgr::_ExecuteXas(const std::vector<LegoTransaction> &xas)
         _ExecuteXaOps(xa);
         ++numXas;
         _xas.push_back(xa);
+        std::ostringstream os;
+        xa.Serialize(os);
+        LegoTransactionProcessed(os.str()).Send();
     }
     SfDPrintf(1, "Executed %d transactions\n", numXas);
 

@@ -11,6 +11,7 @@
 namespace Ui { class MainWindow;}
 
 class LegoApp;
+class LegoTransactionProcessed;
 class QStackedWidget;
 class QTimer;
 
@@ -37,8 +38,7 @@ class LegoMainWindow : public QMainWindow
     void _RegisterNoticeHandlers();
     void _UnregisterNoticeHandlers();
     void _Initialize();
-    void _ProcessLegoConflictNotice(const LegoConflictNotice &);
-    void _ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &);
+    void _ProcessTransactionProcessedNotice(const LegoTransactionProcessed &n);
 
     Ui::MainWindow             *_ui;
     LegoApp                    *_app;

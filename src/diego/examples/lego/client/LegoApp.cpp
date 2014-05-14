@@ -236,7 +236,7 @@ LegoApp::_CreateScene()
 
     // Listen to mouse events
     SoEventCallback *ecb = new SoEventCallback();
-    ecb->addEventCallback(SoMouseButtonEvent::getClassTypeId(), _EventCB, this);
+    ecb->addEventCallback(SoEvent::getClassTypeId(), _EventCB, this);
     // ecb->addEventCallback(SoKeyboardEvent::getClassTypeId(), _EventCB, this);
     _viewerRoot->addChild(ecb);
 
@@ -476,7 +476,6 @@ LegoApp::_AddBrick(LegoBrick *brick,
 
     int matIndex = brickIndex;
     if (selected) {
-        std::cerr << "Coloring brick id %d " << brick->GetID() << " as selected\n";
         SbVec3f highlightColor(0, 1, 1);
         _SetBrickColor(brickIndex, colors, highlightColor);
     } else {
@@ -508,8 +507,6 @@ LegoApp::_ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &)
 void
 LegoApp::_BuildBricks()
 {
-    std::cerr << "Rebuilding bricks\n";
-
     if (_brickVP->texCoord.getNum() == 0) {
         _brickVP->texCoord.setNum(4);
         SbVec2f *texCoords = _brickVP->texCoord.startEditing();
@@ -542,14 +539,10 @@ LegoApp::_BuildBricks()
     _brickIFS->textureCoordIndex.setNum(numVertexIndices);
     int32_t *texIndices = _brickIFS->textureCoordIndex.startEditing();
 
-    int brickCounter = 0;
     for (uint32_t i = 0; i < bricks.size(); ++i) {
         auto *brick = bricks[i];
         bool selected = selection.find(brick->GetID()) != selection.end();
-        if (true) { // !selected) {
-            _AddBrick(brick, brickCounter, coords, colors, indices, matIndices, texIndices, selected);
-            ++brickCounter;
-        }
+        _AddBrick(brick, i, coords, colors, indices, matIndices, texIndices, selected);
     }
 
     _brickVP->vertex.finishEditing();
@@ -637,11 +630,25 @@ LegoApp::_EventCB(void *userData, SoEventCallback *eventCB)
     LegoApp *This = reinterpret_cast<LegoApp*>(userData);
 
     const SoEvent *event = eventCB->getEvent();
-    if (SO_KEY_PRESS_EVENT(event, UP_ARROW)) {
-        std::cerr << "Up arrow\n";
-        eventCB->setHandled();
-    } else if (SO_KEY_PRESS_EVENT(event, DOWN_ARROW)) {
-        std::cerr << "Down arrow\n";
+    if (SO_KEY_PRESS_EVENT(event, ANY)) {
+        const SoKeyboardEvent *keyEvent = 
+            dynamic_cast<const SoKeyboardEvent*>(event);
+        SoKeyboardEvent::Key key = keyEvent->getKey();
+        switch (key) {
+        case SoKeyboardEvent::NUMBER_1:
+        case SoKeyboardEvent::NUMBER_2:
+        case SoKeyboardEvent::NUMBER_3:
+        case SoKeyboardEvent::NUMBER_4:
+        case SoKeyboardEvent::NUMBER_5: {
+            LegoUniverse::Color brickColor = 
+                LegoUniverse::Color(key - SoKeyboardEvent::NUMBER_1);
+            This->_universe->ModifyColorForSelectedBricks(brickColor);
+            This->_universe->ClearSelection();
+            LegoBricksChangedNotice().Send();
+        } break;
+        default:
+            break;
+        }
         eventCB->setHandled();
     } else if (SO_MOUSE_PRESS_EVENT(event, BUTTON1)) {
         std::cerr << "Mouse 1\n";

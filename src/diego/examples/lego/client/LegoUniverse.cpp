@@ -6,6 +6,15 @@
 
 #include <iostream>
 
+static MfVec3f _gColors[] = {
+    MfVec3f(1, 0, 0),
+    MfVec3f(0, 1, 0),
+    MfVec3f(0, 0, 1),
+    MfVec3f(1, 1, 0),
+    MfVec3f(1, 1, 1),
+};
+static int _gNumColors = sizeof(_gColors) / sizeof(_gColors[0]);
+
 LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
     _id(0),
     _xaMgr(this),
@@ -173,6 +182,7 @@ LegoUniverse::_DestroyBrick(LegoBrick *brick)
     assert(it != _bricks.end());
     _bricks.erase(it);
     _brickMap.erase(brick->GetID());
+    _selection.erase(brick->GetID());
     _WriteBrick(brick->GetPosition(), brick->GetSize(), 0);
     delete brick;
 }
@@ -275,4 +285,24 @@ LegoUniverse::Select(const MfVec3d &point)
     }
 
     return false;
+}
+
+void
+LegoUniverse::ClearSelection()
+{
+    _selection.clear();
+}
+
+void
+LegoUniverse::ModifyColorForSelectedBricks(Color color)
+{
+    if (color >= 0 && color < _gNumColors) {
+        _xaMgr.OpenTransaction();
+        for (auto brickID : _selection) {
+            LegoBrick *brick = GetBrick(brickID);
+            assert(brick);
+            brick->SetColor(_gColors[color]);
+        }
+        _xaMgr.CloseTransaction();
+    }
 }

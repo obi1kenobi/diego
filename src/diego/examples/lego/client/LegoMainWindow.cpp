@@ -3,6 +3,7 @@
 #include "ui_MainWindow.h"
 
 #include "LegoApp.h"
+#include "LegoNotices.h"
 
 #include <QtCore/QTimer>
 #include <QtWidgets/QActionGroup>
@@ -55,6 +56,9 @@ LegoMainWindow::~LegoMainWindow()
 void
 LegoMainWindow::_RegisterNoticeHandlers()
 {
+    _noticeKeys.push_back(
+        SfNoticeMgr::Get().Register(this, 
+            &LegoMainWindow::_ProcessTransactionProcessedNotice));
 }
 
 void
@@ -83,6 +87,7 @@ LegoMainWindow::_Initialize()
         _stackedViewWidget->addWidget(viewerWidget);
     }
 
+#if 0
     // Display transaction log from server
     const auto &xaLog = _app->GetTransactionLog();
     for (const auto &xa : xaLog) {
@@ -94,6 +99,7 @@ LegoMainWindow::_Initialize()
             _ui->logTextEdit->insertPlainText(os.str().c_str());
         }
     }
+#endif
 
     // Timer for polling
     connect(_timer, SIGNAL(timeout()), this, SLOT(_PollServer()));
@@ -159,4 +165,12 @@ void
 LegoMainWindow::_SetNetworkEnabled(bool enabled)
 {
     _app->SetNetworkEnabled(enabled);
+}
+
+void
+LegoMainWindow::_ProcessTransactionProcessedNotice(
+    const LegoTransactionProcessed &n)
+{
+    _ui->logTextEdit->moveCursor(QTextCursor::End);
+    _ui->logTextEdit->insertPlainText(n.Get().c_str());
 }

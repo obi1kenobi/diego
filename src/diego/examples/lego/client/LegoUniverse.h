@@ -10,6 +10,14 @@
 
 class LegoUniverse {
   public:
+    enum Color {
+        RED,
+        GREEN,
+        BLUE,
+        YELLOW,
+        WHITE,
+    };
+
     typedef std::unordered_set<uint64_t> SelectionMap;
 
     LegoUniverse(const MfVec3i &gridSize);
@@ -55,13 +63,13 @@ class LegoUniverse {
 
     bool Select(const MfVec3d &point);
 
-    void ClearSelection() {
-        _selection.clear();
-    }
+    void ClearSelection();
 
     const SelectionMap & GetSelection() const {
         return _selection;
     }
+
+    void ModifyColorForSelectedBricks(Color color);
 
   private:
     friend class LegoTransactionMgr;
