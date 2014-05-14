@@ -3,7 +3,7 @@
 int
 main()
 {
-    LegoUniverse universe(MfVec3i(100, 100, 100));
+    LegoUniverse universe(MfVec3i(-50, -50, 0), MfVec3i(50, 50, 100));
     universe.CreateBrick(MfVec3i(0, 0, 0), 
                          MfVec3i(2, 2, 1),
                          LegoBrick::NORTH,

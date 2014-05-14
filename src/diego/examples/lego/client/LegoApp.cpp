@@ -99,7 +99,7 @@ LegoApp::InitializeViewers(QWidget *, QWidget *parentWidget)
 void
 LegoApp::_CreateUniverse()
 {
-    _universe = new LegoUniverse(_worldSize);
+    _universe = new LegoUniverse(_worldMin, _worldMax);
 }
 
 void
@@ -661,6 +661,28 @@ LegoApp::_EventCB(void *userData, SoEventCallback *eventCB)
         case SoKeyboardEvent::LEFT_ALT:
         case SoKeyboardEvent::RIGHT_ALT:
             This->_ctrlDown = true;
+            break;
+        case SoKeyboardEvent::LEFT_ARROW:
+        case SoKeyboardEvent::PAD_4:
+            This->_universe->ModifyPositionForSelectedBricks(MfVec3i(-1, 0, 0));
+            break;
+        case SoKeyboardEvent::RIGHT_ARROW:
+        case SoKeyboardEvent::PAD_6:
+            This->_universe->ModifyPositionForSelectedBricks(MfVec3i(1, 0, 0));
+            break;
+        case SoKeyboardEvent::UP_ARROW:
+        case SoKeyboardEvent::PAD_8:
+            This->_universe->ModifyPositionForSelectedBricks(MfVec3i(0, 1, 0));
+            break;
+        case SoKeyboardEvent::DOWN_ARROW:
+        case SoKeyboardEvent::PAD_2:
+            This->_universe->ModifyPositionForSelectedBricks(MfVec3i(0, -1, 0));
+            break;
+        case SoKeyboardEvent::PAGE_UP:
+            This->_universe->ModifyPositionForSelectedBricks(MfVec3i(0, 0, 1));
+            break;
+        case SoKeyboardEvent::PAGE_DOWN:
+            This->_universe->ModifyPositionForSelectedBricks(MfVec3i(0, 0, -1));
             break;
         default:
             break;

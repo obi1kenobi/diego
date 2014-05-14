@@ -54,6 +54,10 @@ LegoTransactionMgr::CloseTransaction()
 bool
 LegoTransactionMgr::ExecuteOp(const LegoOp &op)
 {
+    if (!_universe->IsValid(op)) {
+        return false;
+    }
+
     bool success = false;
     if (_xa) {
         // Accumulating ops into a transaction for lazy execution

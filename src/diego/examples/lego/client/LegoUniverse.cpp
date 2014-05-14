@@ -1,5 +1,6 @@
 #include "LegoUniverse.h"
 
+#include "Debug.h"
 #include "LegoOps.h"
 #include "LegoTransaction.h"
 #include "Vec3d.h"
@@ -14,29 +15,17 @@ MfVec3f LegoUniverse::COLORS[LegoUniverse::NUM_COLORS] = {
     MfVec3f(1, 1, 1),
 };
 
-LegoUniverse::LegoUniverse(const MfVec3i &gridSize) :
+LegoUniverse::LegoUniverse(const MfVec3i &gridMin, const MfVec3i &gridMax) :
     _id(0),
     _xaMgr(this),
     _xa(NULL),
-    _gridSize(gridSize),
-    _XY(gridSize[0] * gridSize[1]),
-    _grid(gridSize[0] * gridSize[1] * gridSize[2], 0),
+    _gridMin(gridMin),
+    _gridMax(gridMax),
+    _gridSize(gridMax - gridMin + MfVec3i(1)),
+    _XY(_gridSize[0] * _gridSize[1]),
+    _grid(_gridSize[0] * _gridSize[1] * _gridSize[2], 0),
     _brickID(0)
 {
-    _gridMin[0] = -_gridSize[0] / 2;
-    if (_gridSize[0] % 2 == 0) {
-        ++_gridMin[0];
-    }
-    _gridMin[1] = -_gridSize[0] / 2;
-    if (_gridSize[0] % 2 == 1) {
-        ++_gridMin[1];
-    }
-    _gridMin[2] = 0;
-
-    _gridMax[0] = _gridSize[0] / 2;
-    _gridMax[1] = _gridSize[0] / 2;
-    _gridMax[2] = _gridSize[2] - 1;
-
     _xaMgr.CatchupWithServer();
 }
 
@@ -82,7 +71,7 @@ LegoUniverse::ProcessOp(const std::string &opText)
         std::cerr << "Invalid op\n";
         return false;
     }
-    if (!_IsValid(op)) {
+    if (!IsValid(op)) {
         std::cerr << "Invalid op\n";
         return false;
     }
@@ -91,7 +80,7 @@ LegoUniverse::ProcessOp(const std::string &opText)
 }
 
 bool
-LegoUniverse::_IsValid(const LegoOp &op)
+LegoUniverse::IsValid(const LegoOp &op)
 {
     LegoOp::Type opType = op.GetType();
     if (opType == LegoOp::CREATE_BRICK ||
@@ -110,6 +99,13 @@ LegoUniverse::_IsValid(const LegoOp &op)
             }
             if (opType == LegoOp::MODIFY_BRICK_SIZE) {
                 pos = brick->GetPosition();
+            }
+            if (!_IsAvailable(pos, size, brick->GetID())) {
+                return false;
+            }
+        } else {
+            if (!_IsAvailable(pos, size)) {
+                return false;
             }
         }
         for (int i = 0; i < 3; ++i) {
@@ -161,7 +157,7 @@ LegoUniverse::_CreateBrick(const MfVec3i &position,
     uint64_t brickID = _brickID;
     LegoBrick *brick = 
         new LegoBrick(this, brickID, position, size, orientation, color);
-    std::cerr << "Created brick id " << _brickID << std::endl;
+    SfDPrintf(1, "Created brick id %lu\n", brickID);
     _RecordBrick(brick);
 }
 
@@ -186,7 +182,7 @@ LegoUniverse::_DestroyBrick(LegoBrick *brick)
     _brickMap.erase(brick->GetID());
     _selection.erase(brick->GetID());
     _WriteBrick(brick->GetPosition(), brick->GetSize(), 0);
-    std::cerr << "Destroyed brick id " << brick->GetID() << std::endl;
+    SfDPrintf(1, "Destroyed brick id %lu\n", brick->GetID());
     delete brick;
 }
 
@@ -207,16 +203,23 @@ LegoUniverse::_WriteBrick(const MfVec3i &position,
 
 bool
 LegoUniverse::_IsAvailable(const MfVec3i &position,
-                           const MfVec3i &size)
+                           const MfVec3i &size,
+                           uint64_t brickID)
 {
     
     for (int xs = 0; xs < size[0]; ++xs) {
         for (int ys = 0; ys < size[1]; ++ys) {
             for (int zs = 0; zs < size[2]; ++zs) {
                 MfVec3i pos(position[0] + xs, position[1] + ys, position[2] + zs);
-                uint64_t brickID = _ReadGrid(pos);
-                if (brickID > 0) {
-                    return false;
+                uint64_t gridBrickID = _ReadGrid(pos);
+                if (brickID == uint64_t(-1)) {
+                    if (gridBrickID > 0) {
+                        return false;
+                    }
+                } else {
+                    if (gridBrickID > 0 && gridBrickID != brickID) {
+                        return false;
+                    }
                 }
             }
         }
@@ -324,6 +327,10 @@ LegoUniverse::ClearSelection()
 void
 LegoUniverse::ModifyColorForSelectedBricks(Color color)
 {
+    if (_selection.empty()) {
+        return;
+    }
+
     if (color >= 0 && color < NUM_COLORS) {
         _xaMgr.OpenTransaction();
         for (auto brickID : _selection) {
@@ -333,6 +340,24 @@ LegoUniverse::ModifyColorForSelectedBricks(Color color)
         }
         _xaMgr.CloseTransaction();
     }
+}
+
+void
+LegoUniverse::ModifyPositionForSelectedBricks(const MfVec3i &delta)
+{
+    if (_selection.empty()) {
+        return;
+    }
+
+    _xaMgr.OpenTransaction();
+    for (auto brickID : _selection) {
+        LegoBrick *brick = GetBrick(brickID);
+        assert(brick);
+        const MfVec3i &currentPosition = brick->GetPosition();
+        MfVec3i newPosition = currentPosition + delta;
+        brick->SetPosition(newPosition);
+    }
+    _xaMgr.CloseTransaction();
 }
 
 void

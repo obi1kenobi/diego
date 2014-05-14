@@ -23,7 +23,7 @@ class LegoUniverse {
 
     typedef std::unordered_set<uint64_t> SelectionMap;
 
-    LegoUniverse(const MfVec3i &gridSize);
+    LegoUniverse(const MfVec3i &gridMin, const MfVec3i &gridMax);
 
     ~LegoUniverse();
 
@@ -42,6 +42,8 @@ class LegoUniverse {
     LegoTransactionMgr * GetTransactionMgr() {
         return &_xaMgr;
     }
+
+    bool IsValid(const LegoOp &op);
 
     bool ProcessOp(const std::string &op);
 
@@ -75,6 +77,8 @@ class LegoUniverse {
     }
 
     void ModifyColorForSelectedBricks(Color color);
+
+    void ModifyPositionForSelectedBricks(const MfVec3i &delta);
 
   private:
     friend class LegoTransactionMgr;
@@ -117,8 +121,6 @@ class LegoUniverse {
         }
     }
 
-    bool _IsValid(const LegoOp &op);
-
     void _RecordBrick(LegoBrick *brick);
 
     void _DestroyBrick(LegoBrick *brick);
@@ -128,7 +130,8 @@ class LegoUniverse {
                      uint64_t brickID);
 
     bool _IsAvailable(const MfVec3i &position,
-                      const MfVec3i &size);
+                      const MfVec3i &size,
+                      uint64_t brickID = uint64_t(-1));
 
     struct _State {
         _State() : valid(false) {}
