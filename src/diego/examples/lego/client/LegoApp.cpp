@@ -6,6 +6,8 @@
 #include "LegoVoxelizer.h"
 #include "STLReader.h"
 
+#include <Inventor/events/SoMouseButtonEvent.h>
+
 #include <cassert>
 
 LegoApp::LegoApp(LegoMainWindow *mainWindow) :
@@ -17,10 +19,11 @@ LegoApp::LegoApp(LegoMainWindow *mainWindow) :
     _bedSize(_worldSize[0], _worldSize[1], 1),
     _sceneRoot(NULL),
     _platformRoot(NULL),
-    _alarmSensor(NULL),
+    _flashAlarm(NULL),
     _flash(false)
 {
     // Initialize the SoQt library first. 
+    SoDB::init();
     SoQt::init(mainWindow);
 
     _CreateUniverse();
@@ -61,7 +64,7 @@ LegoApp::InitializeViewers(QWidget *, QWidget *parentWidget)
     // Careful; have to set up the scenegraph to a viewer before
     // retrieving the camera. It's the process of setting the
     // scenegraph that triggers the initial camera creation.
-    viewer->setSceneGraph(_viewerRoots[0]);
+    viewer->setSceneGraph(_viewerRoot);
 
     // Initialize camera differently for each viewer to set up the
     // following initial conditions:
@@ -124,6 +127,7 @@ LegoApp::_CreateScene()
 
     // The whole scene
     _sceneRoot = new SoSeparator();
+    _sceneRoot->ref();
 
     _shadowGroup = new SoShadowGroup();
     _shadowGroup->quality.setValue(1);
@@ -147,11 +151,6 @@ LegoApp::_CreateScene()
     // Default draw style
     _sceneDrawStyle = new SoDrawStyle();
     _sceneGroup->addChild(_sceneDrawStyle);
-
-    // Default pick style
-    SoPickStyle *pickStyle = new SoPickStyle();
-    pickStyle->style.setValue(SoPickStyle::UNPICKABLE);
-    _sceneGroup->addChild(pickStyle);
 
     // Enable backface culling
     //
@@ -183,21 +182,17 @@ LegoApp::_CreateScene()
     sceneMeshesRoot->addChild(_sceneMeshes);
 
     // Lego bricks
-    _brickCoords = new SoCoordinate3();
-    SoMaterialBinding *brickMB = new SoMaterialBinding();
-    brickMB->value.setValue(SoMaterialBinding::PER_VERTEX_INDEXED);
+    SoTexture2 *tex = new SoTexture2();
+    tex->filename.setValue("textures/legoWhiteTop.jpg");
     _brickMaterial = new SoMaterial();
     _brickMaterial->specularColor.setValue(SbVec3f(1, 1, 1));
     _brickMaterial->shininess.setValue(1);
-    _brickTexCoords = new SoTextureCoordinate2();
-    SoTexture2 *tex = new SoTexture2();
-    tex->filename.setValue("textures/legoWhiteTop.jpg");
+    _brickVP = new SoVertexProperty();
+    _brickVP->materialBinding.setValue(SoMaterialBinding::PER_FACE_INDEXED);
     _brickIFS = new SoIndexedFaceSet();
-    _sceneMeshes->addChild(_brickCoords);
-    _sceneMeshes->addChild(_brickMaterial);
-    _sceneMeshes->addChild(brickMB);
-    _sceneMeshes->addChild(_brickTexCoords);
+    _brickIFS->vertexProperty.setValue(_brickVP);
     _sceneMeshes->addChild(tex);
+    _sceneMeshes->addChild(_brickMaterial);
     _sceneMeshes->addChild(_brickIFS);
 
     // The scene "environment", i.e., ground plane, etc.
@@ -229,10 +224,21 @@ LegoApp::_CreateScene()
     envNoShadow->style.setValue(SoShadowStyle::NO_SHADOWING);
     _sceneEnv->addChild(envNoShadow);
 
-    // Create viewer roots
-    SoSeparator *viewerRoot = new SoSeparator();
+    // Create viewer root
+    if (_viewerRoot) {
+        _viewerRoot->removeAllChildren();
+    } else {
+        _viewerRoot = new SoSeparator();
+        _viewerRoot->ref();
+    }
     SoCamera *camera = new SoPerspectiveCamera();
-    viewerRoot->addChild(camera);
+    _viewerRoot->addChild(camera);
+
+    // Listen to mouse events
+    SoEventCallback *ecb = new SoEventCallback();
+    ecb->addEventCallback(SoMouseButtonEvent::getClassTypeId(), _EventCB, this);
+    // ecb->addEventCallback(SoKeyboardEvent::getClassTypeId(), _EventCB, this);
+    _viewerRoot->addChild(ecb);
 
     _CallbackData *cbData = new _CallbackData();
     cbData->app = this;
@@ -240,9 +246,8 @@ LegoApp::_CreateScene()
     _cbData.push_back(cbData);
     SoCallback *beginRenderCB = new SoCallback();
     beginRenderCB->setCallback(_BeginRenderSceneCB, cbData);
-    viewerRoot->addChild(beginRenderCB);
-    viewerRoot->addChild(_sceneRoot);
-    _viewerRoots.push_back(viewerRoot);
+    _viewerRoot->addChild(beginRenderCB);
+    _viewerRoot->addChild(_sceneRoot);
 }
 
 SoSeparator *
@@ -364,46 +369,69 @@ LegoApp::_UnregisterNoticeHandlers()
     }
 }
 
+static
+void
+_SetBrickVertex(int brickIndex,
+                int vertexIndex,
+                SbVec3f *coords,
+                const SbVec3f &vertex)
+{
+    int index = brickIndex * 8 + vertexIndex;
+    coords[index] = vertex;
+}
+
+static
+void
+_SetBrickColor(int brickIndex,
+               uint32_t *colors,
+               const SbVec3f &color)
+{
+    int index = brickIndex;
+    colors[index] = 0;
+    colors[index] = colors[index] << 8 | (unsigned char) (color[0] * 255);
+    colors[index] = colors[index] << 8 | (unsigned char) (color[1] * 255);
+    colors[index] = colors[index] << 8 | (unsigned char) (color[2] * 255);
+    colors[index] = colors[index] << 8 | (unsigned char) 255;
+}
+
 inline
 static
 void
-_AddTriangle(int *startIndex, 
-             int32_t *indices, 
-             int32_t *matIndices,
-             int32_t *texIndices, 
+_SetTriangle(int brickIndex,
+             int triIndex,
+             int32_t *vindices, 
+             int32_t *mindices,
+             int32_t *tindices, 
              int v0, int v1, int v2,
              int color,
              int t0, int t1, int t2)
 {
-    uint32_t vi = *startIndex;
-    indices[vi++] = v0;
-    indices[vi++] = v1;
-    indices[vi++] = v2;
-    indices[vi++] = -1;
+    int vindex = brickIndex * 12 * 4 + triIndex * 4;
+    int mindex = brickIndex * 12 + triIndex;
+    int tindex = brickIndex * 12 * 4 + triIndex * 4;
 
-    uint32_t mi = *startIndex;
-    matIndices[mi++] = color;
-    matIndices[mi++] = color;
-    matIndices[mi++] = color;
-    matIndices[mi++] = -1;
+    vindices[vindex++] = v0;
+    vindices[vindex++] = v1;
+    vindices[vindex++] = v2;
+    vindices[vindex++] = -1;
 
-    uint32_t ti = *startIndex;
-    texIndices[ti++] = t0;
-    texIndices[ti++] = t1;
-    texIndices[ti++] = t2;
-    texIndices[ti++] = -1;
+    mindices[mindex++] = color;
 
-    *startIndex += 4;
+    tindices[tindex++] = t0;
+    tindices[tindex++] = t1;
+    tindices[tindex++] = t2;
+    tindices[tindex++] = -1;
 }
 
 void
 LegoApp::_AddBrick(LegoBrick *brick,
                    uint32_t brickIndex,
                    SbVec3f *coords,
-                   SbVec3f *colors,
-                   int32_t *indices,
-                   int32_t *matIndices,
-                   int32_t *texIndices)
+                   uint32_t *colors,
+                   int32_t *vindices,
+                   int32_t *mindices,
+                   int32_t *tindices,
+                   bool selected)
 {
     const MfVec3i &pos = brick->GetPosition();
     const MfVec3i &size = brick->GetSize();
@@ -421,37 +449,54 @@ LegoApp::_AddBrick(LegoBrick *brick,
     float yFaceSize = size[1];
     float zFaceSize = size[2];
 
-    // sv = start vertex
-    int sv = brickIndex * 8;
-    int vindex = sv;
-    coords[vindex++] = SbVec3f(xStart,             yStart,             zStart + zFaceSize);
-    coords[vindex++] = SbVec3f(xStart + xFaceSize, yStart,             zStart + zFaceSize);
-    coords[vindex++] = SbVec3f(xStart,             yStart + yFaceSize, zStart + zFaceSize);
-    coords[vindex++] = SbVec3f(xStart + xFaceSize, yStart + yFaceSize, zStart + zFaceSize);
-    coords[vindex++] = SbVec3f(xStart,             yStart,             zStart);
-    coords[vindex++] = SbVec3f(xStart + xFaceSize, yStart,             zStart);
-    coords[vindex++] = SbVec3f(xStart,             yStart + yFaceSize, zStart);
-    coords[vindex++] = SbVec3f(xStart + xFaceSize, yStart + yFaceSize, zStart);
+    _SetBrickVertex(brickIndex, 0, coords, SbVec3f(xStart,
+                                                   yStart,
+                                                   zStart + zFaceSize));
+    _SetBrickVertex(brickIndex, 1, coords, SbVec3f(xStart + xFaceSize,
+                                                   yStart,
+                                                   zStart + zFaceSize));
+    _SetBrickVertex(brickIndex, 2, coords, SbVec3f(xStart,
+                                                   yStart + yFaceSize,
+                                                   zStart + zFaceSize));
+    _SetBrickVertex(brickIndex, 3, coords, SbVec3f(xStart + xFaceSize,
+                                                   yStart + yFaceSize,
+                                                   zStart + zFaceSize));
+    _SetBrickVertex(brickIndex, 4, coords, SbVec3f(xStart,
+                                                   yStart,
+                                                   zStart));
+    _SetBrickVertex(brickIndex, 5, coords, SbVec3f(xStart + xFaceSize,
+                                                   yStart,
+                                                   zStart));
+    _SetBrickVertex(brickIndex, 6, coords, SbVec3f(xStart,
+                                                   yStart + yFaceSize,
+                                                   zStart));
+    _SetBrickVertex(brickIndex, 7, coords, SbVec3f(xStart + xFaceSize,
+                                                   yStart + yFaceSize,
+                                                   zStart));
 
-    const MfVec3f &color = brick->GetColor();
-    colors[brickIndex] = SbVec3f(color[0], color[1], color[2]);
     int matIndex = brickIndex;
+    if (selected) {
+        std::cerr << "Coloring brick id %d " << brick->GetID() << " as selected\n";
+        SbVec3f highlightColor(0, 1, 1);
+        _SetBrickColor(brickIndex, colors, highlightColor);
+    } else {
+        const MfVec3f &color = brick->GetColor();
+        _SetBrickColor(brickIndex, colors, SbVec3f(color[0], color[1], color[2]));
+    }
 
-    int iindex = brickIndex * 12 * 4;
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 0, sv + 1, sv + 2, matIndex, 0, 1, 2);
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 2, sv + 1, sv + 3, matIndex, 2, 1, 3);
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 5, sv + 4, sv + 7, matIndex, 0, 0, 0);
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 7, sv + 4, sv + 6, matIndex, 0, 0, 0);
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 4, sv + 0, sv + 6, matIndex, 0, 0, 0);
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 6, sv + 0, sv + 2, matIndex, 0, 0, 0);
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 1, sv + 5, sv + 3, matIndex, 0, 0, 0);
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 3, sv + 5, sv + 7, matIndex, 0, 0, 0);
-
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 2, sv + 3, sv + 6, matIndex, 0, 0, 0);
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 6, sv + 3, sv + 7, matIndex, 0, 0, 0);
-
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 4, sv + 5, sv + 0, matIndex, 0, 0, 0);
-    _AddTriangle(&iindex, indices, matIndices, texIndices, sv + 0, sv + 5, sv + 1, matIndex, 0, 0, 0);
+    int sv = brickIndex * 8;
+    _SetTriangle(brickIndex,  0, vindices, mindices, tindices, sv + 0, sv + 1, sv + 2, matIndex, 0, 1, 2);
+    _SetTriangle(brickIndex,  1, vindices, mindices, tindices, sv + 2, sv + 1, sv + 3, matIndex, 2, 1, 3);
+    _SetTriangle(brickIndex,  2, vindices, mindices, tindices, sv + 5, sv + 4, sv + 7, matIndex, 0, 0, 0);
+    _SetTriangle(brickIndex,  3, vindices, mindices, tindices, sv + 7, sv + 4, sv + 6, matIndex, 0, 0, 0);
+    _SetTriangle(brickIndex,  4, vindices, mindices, tindices, sv + 4, sv + 0, sv + 6, matIndex, 0, 0, 0);
+    _SetTriangle(brickIndex,  5, vindices, mindices, tindices, sv + 6, sv + 0, sv + 2, matIndex, 0, 0, 0);
+    _SetTriangle(brickIndex,  6, vindices, mindices, tindices, sv + 1, sv + 5, sv + 3, matIndex, 0, 0, 0);
+    _SetTriangle(brickIndex,  7, vindices, mindices, tindices, sv + 3, sv + 5, sv + 7, matIndex, 0, 0, 0);
+    _SetTriangle(brickIndex,  8, vindices, mindices, tindices, sv + 2, sv + 3, sv + 6, matIndex, 0, 0, 0);
+    _SetTriangle(brickIndex,  9, vindices, mindices, tindices, sv + 6, sv + 3, sv + 7, matIndex, 0, 0, 0);
+    _SetTriangle(brickIndex, 10, vindices, mindices, tindices, sv + 4, sv + 5, sv + 0, matIndex, 0, 0, 0);
+    _SetTriangle(brickIndex, 11, vindices, mindices, tindices, sv + 0, sv + 5, sv + 1, matIndex, 0, 0, 0);
 }
 
 void
@@ -463,40 +508,52 @@ LegoApp::_ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &)
 void
 LegoApp::_BuildBricks()
 {
-    if (_brickTexCoords->point.getNum() == 0) {
-        _brickTexCoords->point.setNum(4);
-        SbVec2f *texCoords = _brickTexCoords->point.startEditing();
+    std::cerr << "Rebuilding bricks\n";
+
+    if (_brickVP->texCoord.getNum() == 0) {
+        _brickVP->texCoord.setNum(4);
+        SbVec2f *texCoords = _brickVP->texCoord.startEditing();
         texCoords[0] =  SbVec2f(0, 0);
         texCoords[1] =  SbVec2f(1, 0);
         texCoords[2] =  SbVec2f(0, 1);
         texCoords[3] =  SbVec2f(1, 1);
-        _brickTexCoords->point.finishEditing();
+        _brickVP->texCoord.finishEditing();
     }
 
     const auto &bricks = _universe->GetBricks();
+    const auto &selection = _universe->GetSelection();
 
-    _brickCoords->point.setNum(8 * bricks.size());
-    SbVec3f *coords = _brickCoords->point.startEditing();
+    int numBricks = bricks.size();
+    int numVertexIndices = 12 * 4 * numBricks;
+    int numTriangleIndices = 12 * numBricks;
 
-    _brickMaterial->diffuseColor.setNum(bricks.size());
-    SbVec3f *colors = _brickMaterial->diffuseColor.startEditing();
+    _brickVP->vertex.setNum(8 * numBricks);
+    SbVec3f *coords = _brickVP->vertex.startEditing();
 
-    int numBrickIndices = 12 * 4 * bricks.size();
-    _brickIFS->coordIndex.setNum(numBrickIndices);
+    _brickVP->orderedRGBA.setNum(numBricks);
+    uint32_t *colors = _brickVP->orderedRGBA.startEditing();
+
+    _brickIFS->coordIndex.setNum(numVertexIndices);
     int32_t *indices = _brickIFS->coordIndex.startEditing();
 
-    _brickIFS->materialIndex.setNum(numBrickIndices);
+    _brickIFS->materialIndex.setNum(numTriangleIndices);
     int32_t *matIndices = _brickIFS->materialIndex.startEditing();
 
-    _brickIFS->textureCoordIndex.setNum(numBrickIndices);
+    _brickIFS->textureCoordIndex.setNum(numVertexIndices);
     int32_t *texIndices = _brickIFS->textureCoordIndex.startEditing();
 
+    int brickCounter = 0;
     for (uint32_t i = 0; i < bricks.size(); ++i) {
         auto *brick = bricks[i];
-        _AddBrick(brick, i, coords, colors, indices, matIndices, texIndices);
+        bool selected = selection.find(brick->GetID()) != selection.end();
+        if (true) { // !selected) {
+            _AddBrick(brick, brickCounter, coords, colors, indices, matIndices, texIndices, selected);
+            ++brickCounter;
+        }
     }
 
-    _brickCoords->point.finishEditing();
+    _brickVP->vertex.finishEditing();
+    _brickVP->orderedRGBA.finishEditing();
     _brickIFS->coordIndex.finishEditing();
     _brickIFS->textureCoordIndex.finishEditing();
 }
@@ -510,8 +567,11 @@ LegoApp::GetTransactionLog()
 void
 LegoApp::DumpScenegraph()
 {
-    SoWriteAction wa;
+    SoOutput output;
+    output.openFile("lego.iv");
+    SoWriteAction wa(&output);
     wa.apply(_sceneRoot);
+    output.closeFile();
 }
 
 void
@@ -548,7 +608,7 @@ LegoApp::IsNetworkEnabled() const
 void
 LegoApp::_ProcessLegoConflictNotice(const LegoConflictNotice &)
 {
-    if (_alarmSensor) {
+    if (_flashAlarm) {
         return;
     }
 
@@ -557,9 +617,9 @@ LegoApp::_ProcessLegoConflictNotice(const LegoConflictNotice &)
     _sceneRoot->touch();
 
     // Schedule alarm to turn off flashing
-    _alarmSensor = new SoAlarmSensor(&LegoApp::_ToggleFlash, this);
-    _alarmSensor->setTimeFromNow(SbTime(0.5));
-    _alarmSensor->schedule();
+    _flashAlarm = new SoAlarmSensor(&LegoApp::_ToggleFlash, this);
+    _flashAlarm->setTimeFromNow(SbTime(0.5));
+    _flashAlarm->schedule();
 }
 
 void
@@ -568,5 +628,59 @@ LegoApp::_ToggleFlash(void *userData, SoSensor *sensor)
     LegoApp *This = reinterpret_cast<LegoApp*>(userData);
     This->_flash = false;
     This->_sceneRoot->touch();
-    delete This->_alarmSensor; This->_alarmSensor = NULL;
+    delete This->_flashAlarm; This->_flashAlarm = NULL;
+}
+
+void
+LegoApp::_EventCB(void *userData, SoEventCallback *eventCB)
+{
+    LegoApp *This = reinterpret_cast<LegoApp*>(userData);
+
+    const SoEvent *event = eventCB->getEvent();
+    if (SO_KEY_PRESS_EVENT(event, UP_ARROW)) {
+        std::cerr << "Up arrow\n";
+        eventCB->setHandled();
+    } else if (SO_KEY_PRESS_EVENT(event, DOWN_ARROW)) {
+        std::cerr << "Down arrow\n";
+        eventCB->setHandled();
+    } else if (SO_MOUSE_PRESS_EVENT(event, BUTTON1)) {
+        std::cerr << "Mouse 1\n";
+
+        std::cerr << "Pick info from event callback:\n";
+        const SoPickedPoint *pickedPoint = eventCB->getPickedPoint();
+
+        This->_HandlePick(pickedPoint);
+
+        eventCB->setHandled();
+    } else if (SO_MOUSE_PRESS_EVENT(event, BUTTON2)) {
+        std::cerr << "Mouse 2\n";
+        eventCB->setHandled();
+    } else if (SO_MOUSE_PRESS_EVENT(event, BUTTON3)) {
+        std::cerr << "Mouse 3\n";
+        eventCB->setHandled();
+    }
+}
+
+void
+LegoApp::_HandlePick(const SoPickedPoint *pickedPoint)
+{
+    if (pickedPoint) {
+        const SbVec3f &point = pickedPoint->getPoint();
+        SbVec3f normal = pickedPoint->getNormal();
+        std::cerr << "  Point:  " << point[0] << ", " << point[1] << ", " << point[2] << std::endl;
+        std::cerr << "  Normal: " << normal[0] << ", " << normal[1] << ", " << normal[2] << std::endl;
+
+        normal.normalize();
+        MfVec3d selPoint = 
+            MfVec3d(point[0], point[1], point[2]) - 
+            MfVec3d(normal[0], normal[1], normal[2]) * 0.5;
+        if (selPoint[2] < 0.0) {
+            _universe->ClearSelection();
+        } else {
+            _universe->Select(selPoint);
+        }
+    } else {
+        _universe->ClearSelection();
+    }
+    LegoBricksChangedNotice().Send();
 }

@@ -3,6 +3,9 @@
 
 #include "ui_MainWindow.h"
 
+#include "LegoNotices.h"
+#include "NoticeMgr.h"
+
 #include <QtWidgets/QMainWindow>
 
 namespace Ui { class MainWindow;}
@@ -31,12 +34,17 @@ class LegoMainWindow : public QMainWindow
     void _SetNetworkEnabled(bool enabled);
 
   private:
+    void _RegisterNoticeHandlers();
+    void _UnregisterNoticeHandlers();
     void _Initialize();
+    void _ProcessLegoConflictNotice(const LegoConflictNotice &);
+    void _ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &);
 
     Ui::MainWindow             *_ui;
     LegoApp                    *_app;
     QStackedWidget             *_stackedViewWidget;
     QTimer                     *_timer;
+    std::vector<SfNoticeMgr::Key> _noticeKeys;
 };
 
 #endif // __MAIN_WINDOW_H__

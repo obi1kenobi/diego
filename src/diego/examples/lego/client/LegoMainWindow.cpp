@@ -43,10 +43,26 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     connect(_ui->actionNetwork, 
             SIGNAL(triggered(bool)), this,
             SLOT(_SetNetworkEnabled(bool)));
+
+    _RegisterNoticeHandlers();
 }
 
 LegoMainWindow::~LegoMainWindow()
 {
+    _UnregisterNoticeHandlers();
+}
+
+void
+LegoMainWindow::_RegisterNoticeHandlers()
+{
+}
+
+void
+LegoMainWindow::_UnregisterNoticeHandlers()
+{
+    for (const auto &key : _noticeKeys) {
+        SfNoticeMgr::Get().Cancel(key);
+    }
 }
 
 void

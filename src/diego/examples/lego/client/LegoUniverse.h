@@ -6,9 +6,12 @@
 
 #include <cassert>
 #include <unordered_map>
+#include <unordered_set>
 
 class LegoUniverse {
   public:
+    typedef std::unordered_set<uint64_t> SelectionMap;
+
     LegoUniverse(const MfVec3i &gridSize);
 
     ~LegoUniverse();
@@ -50,6 +53,16 @@ class LegoUniverse {
     // Restore from snap shot
     void Restore();
 
+    bool Select(const MfVec3d &point);
+
+    void ClearSelection() {
+        _selection.clear();
+    }
+
+    const SelectionMap & GetSelection() const {
+        return _selection;
+    }
+
   private:
     friend class LegoTransactionMgr;
 
@@ -85,6 +98,12 @@ class LegoUniverse {
 
     void _RecordBrick(LegoBrick *brick);
 
+    void _DestroyBrick(LegoBrick *brick);
+
+    void _WriteBrick(const MfVec3i &position, 
+                     const MfVec3i &size, 
+                     uint64_t brickID);
+
     struct _State {
         _State() : valid(false) {}
 
@@ -106,6 +125,7 @@ class LegoUniverse {
     _BrickMap _brickMap;
     uint64_t _brickID;
     std::vector<uint64_t> _grid;
+    SelectionMap _selection;
 
     _State _snapshot;
 };

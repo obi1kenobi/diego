@@ -2,6 +2,7 @@
 
 #include "LegoOps.h"
 #include "LegoTransaction.h"
+#include "Vec3d.h"
 
 #include <iostream>
 
@@ -115,6 +116,13 @@ LegoUniverse::_IsValid(const LegoOp &op)
             }
         }
     }
+    if (opType != LegoOp::CREATE_BRICK) {
+        LegoBrick *brick = GetBrick(op.GetBrickID());
+        if (!brick) {
+            std::cerr << "ERROR: Unknown brick id " << op.GetBrickID() << "\n";
+            return false;
+        }
+    }
     return true;
 }
 
@@ -155,6 +163,25 @@ LegoUniverse::_RecordBrick(LegoBrick *brick)
 
     _bricks.push_back(brick);
     _brickMap.insert(_BrickMap::value_type(brickID, brick));
+    _WriteBrick(position, size, brickID);
+}
+
+void
+LegoUniverse::_DestroyBrick(LegoBrick *brick)
+{
+    auto it = std::find(_bricks.begin(), _bricks.end(), brick);
+    assert(it != _bricks.end());
+    _bricks.erase(it);
+    _brickMap.erase(brick->GetID());
+    _WriteBrick(brick->GetPosition(), brick->GetSize(), 0);
+    delete brick;
+}
+
+void
+LegoUniverse::_WriteBrick(const MfVec3i &position, 
+                          const MfVec3i &size, 
+                          uint64_t brickID)
+{
     for (int xs = 0; xs < size[0]; ++xs) {
         for (int ys = 0; ys < size[1]; ++ys) {
             for (int zs = 0; zs < size[2]; ++zs) {
@@ -228,4 +255,24 @@ LegoUniverse::Clear()
     _bricks.clear();
     _brickMap.clear();
     _grid.assign(_gridSize[0] * _gridSize[1] * _gridSize[2], 0);
+}
+
+bool
+LegoUniverse::Select(const MfVec3d &point)
+{
+    for (LegoBrick *brick : _bricks) {
+        const MfVec3i &minPoint = brick->GetPosition();
+        MfVec3i maxPoint = minPoint + brick->GetSize();
+        bool inside = true;
+        for (int i = 0; i < 3; ++i) {
+            inside = inside && point[i] >= minPoint[i] && point[i] <= maxPoint[i];
+        }
+        if (inside) {
+            _selection.insert(brick->GetID());
+            std::cerr << "Selected brick id #" << brick->GetID() << std::endl;
+            return true;
+        }
+    }
+
+    return false;
 }

@@ -297,33 +297,37 @@ LegoTransactionMgr::_ExecuteXaOps(const LegoTransaction &xa)
 void
 LegoTransactionMgr::_ExecuteOp(const LegoOp &op, bool doNotify)
 {
-    switch (op.GetType()) {
-    case LegoOp::CREATE_BRICK: {
+    if (op.GetType() == LegoOp::CREATE_BRICK) {
         _universe->_CreateBrick(op.GetPosition(),
                                 op.GetSize(),
                                 op.GetOrientation(),
                                 op.GetColor());
-    } break;
-    case LegoOp::MODIFY_BRICK_POSITION: {
+    } else {
         LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
-        brick->_SetPosition(op.GetPosition());
-    } break;
-    case LegoOp::MODIFY_BRICK_SIZE: {
-        LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
-        brick->_SetSize(op.GetSize());
-    } break;
-    case LegoOp::MODIFY_BRICK_ORIENTATION: {
-        LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
-        brick->_SetOrientation(op.GetOrientation());
-    } break;
-    case LegoOp::MODIFY_BRICK_COLOR: {
-        LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
-        brick->_SetColor(op.GetColor());
-    } break;
-    case LegoOp::DELETE_BRICK: {
-        LegoBrick *brick = _universe->GetBrick(op.GetBrickID());
-        brick->_Destroy();
-    } break;
+        if (!brick) {
+            std::cerr << "ERROR: Unknown brick id " << op.GetBrickID() << "\n";
+            return;
+        }
+        switch (op.GetType()) {
+        case LegoOp::MODIFY_BRICK_POSITION: {
+            brick->_SetPosition(op.GetPosition());
+        } break;
+        case LegoOp::MODIFY_BRICK_SIZE: {
+            brick->_SetSize(op.GetSize());
+        } break;
+        case LegoOp::MODIFY_BRICK_ORIENTATION: {
+            brick->_SetOrientation(op.GetOrientation());
+        } break;
+        case LegoOp::MODIFY_BRICK_COLOR: {
+            brick->_SetColor(op.GetColor());
+        } break;
+        case LegoOp::DELETE_BRICK: {
+            _universe->_DestroyBrick(brick);
+        } break;
+        default: 
+            std::cerr << "FATAL: Unknown op\n";
+            throw std::exception();
+        }
     }
 
     if (doNotify) {

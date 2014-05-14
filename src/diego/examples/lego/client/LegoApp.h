@@ -22,6 +22,8 @@ class LegoConflictNotice;
 class LegoMainWindow;
 class LegoUniverse;
 class SoAlarmSensor;
+class SoEventCallback;
+class SoPickedPoint;
 class SoSensor;
 
 class LegoApp {
@@ -79,12 +81,17 @@ class LegoApp {
     void _AddBrick(LegoBrick *brick,
                    uint32_t brickIndex,
                    SbVec3f *coords,
-                   SbVec3f *colors,
+                   uint32_t *colors,
                    int32_t *indices,
                    int32_t *matIndices,
-                   int32_t *texIndices);
+                   int32_t *texIndices,
+                   bool selected);
 
     static void _ToggleFlash(void *userData, SoSensor *sensor);
+
+    static void _EventCB(void *userData, SoEventCallback *eventCB);
+
+    void _HandlePick(const SoPickedPoint *pickedPoint);
 
     std::vector<SfNoticeMgr::Key> _noticeKeys;
 
@@ -96,7 +103,7 @@ class LegoApp {
     LegoMainWindow             *_mainWindow;
     std::vector<QWidget*>       _viewerWidgets;
     std::vector<SoQtViewer*>    _viewers;
-    std::vector<SoSeparator*>   _viewerRoots;
+    SoSeparator                *_viewerRoot;
     LegoUniverse               *_universe;
     std::vector<_CallbackData*> _cbData;
 
@@ -116,8 +123,9 @@ class LegoApp {
     SoCoordinate3              *_brickCoords;
     SoMaterial                 *_brickMaterial;
     SoTextureCoordinate2       *_brickTexCoords;
+    SoVertexProperty           *_brickVP;
     SoIndexedFaceSet           *_brickIFS;
-    SoAlarmSensor              *_alarmSensor;
+    SoAlarmSensor              *_flashAlarm;
     bool                        _flash;
 };
 
