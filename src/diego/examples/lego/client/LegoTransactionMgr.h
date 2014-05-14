@@ -39,7 +39,7 @@ class LegoTransactionMgr {
     std::string _SendToServer(const LegoTransaction &xa);
     void _ParseResponse(std::istream &is,
                         std::vector<LegoTransaction> *serverLog);
-    void _ExecuteXas(const std::vector<LegoTransaction> &xas);
+    int _ExecuteXas(const std::vector<LegoTransaction> &xas);
     bool _ExecuteXa(const LegoTransaction &xa);
     void _ExecuteXaOps(const LegoTransaction &xa);
     void _ExecuteOp(const LegoOp &op, bool doNotify = false);
@@ -52,6 +52,9 @@ class LegoTransactionMgr {
     std::vector<LegoTransaction> _xas;
     LegoTransaction *_xa;
     LegoTransaction _offlineXa;
+
+    int64_t _clientID;
+    int64_t _reqID;
 };
 
 #endif //  LEGO_TRANSACTION_MGR_H

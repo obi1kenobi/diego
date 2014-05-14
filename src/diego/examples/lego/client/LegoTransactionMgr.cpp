@@ -16,12 +16,17 @@
 #include <iostream>
 #include <sstream>
 
+#include <time.h>
+
 LegoTransactionMgr::LegoTransactionMgr(LegoUniverse *universe) : 
     _network(true),
     _universe(universe),
     _xaIds(0),
-    _xa(NULL)
+    _xa(NULL),
+    _reqID(0)
 {
+    srand48(time(NULL));
+    _clientID = lrand48();
 }
 
 void
@@ -73,6 +78,10 @@ LegoTransactionMgr::ExecuteOp(const LegoOp &op)
 bool
 LegoTransactionMgr::_ExecuteXa(const LegoTransaction &xa)
 {
+    if (xa.GetOps().empty()) {
+        return false;
+    }
+
     // Send transaction to server
     std::string response = _SendToServer(xa);
 
@@ -123,14 +132,19 @@ LegoTransactionMgr::_SendToServer(const LegoTransaction &xa)
     return response;
 }
 
+
 void
 LegoTransactionMgr::_EmitXaPrologue(std::ostream &os)
 {
     // Assign transaction id
     uint64_t xaID = _xaIds;
 
+    int64_t clientID = _clientID;
+    int64_t reqID = _reqID++;
+
     os << "Submit\n";
-    os << _universe->GetID() << " " << xaID << "\n";
+    os << _universe->GetID() << " " << xaID 
+       << " " << clientID << " " << reqID << "\n";
 }
 
 void
@@ -158,9 +172,13 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
     // '#' is the sentinel that represents end of response
     SfDPrintf(1, "Parsing response:\n");
     int numXas = 0;
-    while (is.peek() != '#' && is.good()) {
+    while (is.good()) {
         // Skip white space or/and newline
         _SkipWhiteSpace(is);
+
+        if (!is.good() || is.peek() == '#') {
+            break;
+        }
 
         // Parse namespace id
         int recNamespace;
@@ -168,9 +186,18 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
         SfDPrintf(1, "Namespace: %d\n", recNamespace);
 
         // Parse transaction id
-        int recXaID;
+        int64_t recXaID;
         is >> recXaID;
         SfDPrintf(1, "XaID: %d\n", recXaID);
+        if (recXaID >= _xaIds) {
+            _xaIds = recXaID + 1;
+        }
+
+        // Parse at-most-once tokens
+        int64_t clientID, reqID;
+        is >> clientID;
+        is >> reqID;
+        SfDPrintf(1, "Client ID %ld, Req ID %ld\n", clientID, reqID);
 
         // Skip white space or/and newline
         _SkipWhiteSpace(is);
@@ -198,11 +225,11 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
         }
 
         // Add transaction to log
-        assert(!recXa.GetOps().empty());
+        if (recXa.GetOps().empty()) {
+            continue;
+        }
         serverLog->push_back(recXa);
         ++numXas;
-
-        _SkipWhiteSpace(is);
     }
     SfDPrintf(1, "Parsed %d\n", numXas);
 }
@@ -240,11 +267,11 @@ LegoTransactionMgr::_SendMessage(const std::string &message)
     return response;
 }
 
-void
+int
 LegoTransactionMgr::_ExecuteXas(const std::vector<LegoTransaction> &xas)
 {
     if (xas.empty()) {
-        return;
+        return 0;
     }
 
     int numXas = 0;
@@ -252,9 +279,10 @@ LegoTransactionMgr::_ExecuteXas(const std::vector<LegoTransaction> &xas)
         _ExecuteXaOps(xa);
         ++numXas;
         _xas.push_back(xa);
-        ++_xaIds;
     }
     SfDPrintf(1, "Executed %d transactions\n", numXas);
+
+    return numXas;
 }
 
 void
@@ -338,7 +366,8 @@ LegoTransactionMgr::CatchupWithServer()
     std::vector<LegoTransaction> serverLog;
     _ParseResponse(is, &serverLog);
     SfDPrintf(1, "Received %d transactions from server\n", serverLog.size());
-    _ExecuteXas(serverLog);
-
-    LegoBricksChangedNotice().Send();
+    int numXas = _ExecuteXas(serverLog);
+    if (numXas != 0) {
+        LegoBricksChangedNotice().Send();
+    }
 }
