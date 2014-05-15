@@ -5,6 +5,8 @@
 #include "LegoTransaction.h"
 #include "Vec3d.h"
 
+#include <Inventor/So.h>
+
 #include <iostream>
 
 MfVec3f LegoUniverse::COLORS[LegoUniverse::NUM_COLORS] = {
@@ -24,7 +26,9 @@ LegoUniverse::LegoUniverse(const MfVec3i &gridMin, const MfVec3i &gridMax) :
     _gridSize(gridMax - gridMin + MfVec3i(1)),
     _XY(_gridSize[0] * _gridSize[1]),
     _grid(_gridSize[0] * _gridSize[1] * _gridSize[2], 0),
-    _brickID(0)
+    _brickID(0),
+    _gravitySensor(new SoOneShotSensor(&LegoUniverse::_ApplyGravityCB, this)),
+    _gravity(false)
 {
     _xaMgr.CatchupWithServer();
 }
@@ -372,4 +376,60 @@ LegoUniverse::NewUniverse()
     }
 
     _xaMgr.CloseTransaction();
+}
+
+void
+LegoUniverse::SetGravityEnabled(bool enabled)
+{
+    _gravity = enabled;
+    if (_gravity) {
+        _gravitySensor->schedule();
+    } else {
+        _gravitySensor->unschedule();
+    }
+}
+
+void
+LegoUniverse::_ApplyGravityCB(void *userData, SoSensor *sensor)
+{
+    LegoUniverse *This = reinterpret_cast<LegoUniverse*>(userData);
+
+    if (!This->_gravity) {
+        return;
+    }
+
+    This->_ApplyGravity();
+
+    This->_gravitySensor->schedule();
+}
+
+void
+LegoUniverse::_ApplyGravity()
+{
+    for (auto *brick : _bricks) {
+        brick->ResetMark();
+    }
+
+    bool moves;
+    do {
+        moves = false;
+        for (auto *brick : _bricks) {
+            if (brick->IsMarked()) {
+                continue;
+            }
+
+            const auto &position = brick->GetPosition();
+            const auto &size = brick->GetSize();
+            const auto &id = brick->GetID();
+            if (position[2] == 0) {
+                continue;
+            }
+            auto newPosition = position - MfVec3i(0, 0, 1);
+            if (_IsAvailable(position - position, size, id)) {
+                brick->SetPosition(newPosition);
+                brick->Mark();
+                moves = true;
+            }
+        }
+    } while (moves);
 }

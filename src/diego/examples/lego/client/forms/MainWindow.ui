@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Foundry</string>
+   <string>DLego</string>
   </property>
   <property name="statusTip">
    <string/>
@@ -162,7 +162,7 @@
     <property name="title">
      <string>Bricks</string>
     </property>
-    <addaction name="actionCreate_Brick"/>
+    <addaction name="actionGravity"/>
    </widget>
    <widget class="QMenu" name="menuDeveloper">
     <property name="title">
@@ -772,9 +772,15 @@
     <string>Volume Polygon Tumble</string>
    </property>
   </action>
-  <action name="actionCreate_Brick">
+  <action name="actionGravity">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Create Brick</string>
+    <string>Gravity</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
    </property>
   </action>
   <action name="actionDumpScenegraph">

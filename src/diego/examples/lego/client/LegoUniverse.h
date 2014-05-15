@@ -9,6 +9,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
+class SoSensor;
+class SoOneShotSensor;
+
 class LegoUniverse {
   public:
     enum Color {
@@ -81,6 +84,12 @@ class LegoUniverse {
 
     void ModifyPositionForSelectedBricks(const MfVec3i &delta);
 
+    void SetGravityEnabled(bool enabled);
+
+    bool IsGravityEnabled() const {
+        return _gravity;
+    }
+
   private:
     friend class LegoTransactionMgr;
 
@@ -134,6 +143,10 @@ class LegoUniverse {
                       const MfVec3i &size,
                       uint64_t brickID = uint64_t(-1));
 
+    static void _ApplyGravityCB(void *userData, SoSensor *sensor);
+
+    void _ApplyGravity();
+
     struct _State {
         _State() : valid(false) {}
 
@@ -156,6 +169,8 @@ class LegoUniverse {
     uint64_t _brickID;
     std::vector<uint64_t> _grid;
     SelectionMap _selection;
+    SoOneShotSensor *_gravitySensor;
+    bool _gravity;
 
     _State _snapshot;
 };

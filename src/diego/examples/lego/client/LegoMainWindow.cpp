@@ -22,7 +22,8 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     QMainWindow(parent),
     _ui(new Ui::MainWindow),
     _app(NULL),
-    _timer(new QTimer(this))
+    _timer(new QTimer(this)),
+    _polling(false)
 {
     // Set up
     _ui->setupUi(this);
@@ -53,9 +54,9 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     connect(_ui->actionNetwork, 
             SIGNAL(triggered(bool)), this,
             SLOT(_SetNetworkEnabled(bool)));
-    connect(this, 
-            SIGNAL(_PollServerSignal()), this, 
-            SLOT(_PollServer()));
+    connect(_ui->actionGravity, 
+            SIGNAL(triggered(bool)), this,
+            SLOT(_SetGravityEnabled(bool)));
 
     _RegisterNoticeHandlers();
 }
@@ -99,28 +100,9 @@ LegoMainWindow::_Initialize()
         _stackedViewWidget->addWidget(viewerWidget);
     }
 
-#if 0
-    // Display transaction log from server
-    const auto &xaLog = _app->GetTransactionLog();
-    for (const auto &xa : xaLog) {
-        const auto &ops = xa.GetOps();
-        for (const auto op : ops) {
-            std::ostringstream os;
-            op.Serialize(os);
-            _ui->logTextEdit->moveCursor(QTextCursor::End);
-            _ui->logTextEdit->insertPlainText(os.str().c_str());
-        }
-    }
-#endif
-
     // Timer for polling
-    connect(_timer, SIGNAL(timeout()), this, SLOT(_PollTimer()));
+    connect(_timer, SIGNAL(timeout()), this, SLOT(_PollServer()));
     _timer->start(LEGO_POLL_INTERVAL);
-}
-
-void
-LegoMainWindow::_AddBrick()
-{
 }
 
 void
@@ -166,16 +148,12 @@ LegoMainWindow::_ImportModels()
 }
 
 void
-LegoMainWindow::_PollTimer()
-{
-    emit _PollServerSignal();
-}
-
-void
 LegoMainWindow::_PollServer()
 {
-    if (_app) {
+    if (_app && !_polling) {
+        _polling = true;
         _app->PollServer();
+        _polling = false;
     }
 }
 
@@ -189,8 +167,10 @@ void
 LegoMainWindow::_ProcessTransactionProcessedNotice(
     const LegoTransactionProcessed &n)
 {
+#if 0
     _ui->logTextEdit->moveCursor(QTextCursor::End);
     _ui->logTextEdit->insertPlainText(n.Get().c_str());
+#endif
 }
 
 void
@@ -209,4 +189,10 @@ void
 LegoMainWindow::_NewUniverse()
 {
     _app->NewUniverse();
+}
+
+void
+LegoMainWindow::_SetGravityEnabled(bool gravity)
+{
+    _app->SetGravityEnabled(gravity);
 }

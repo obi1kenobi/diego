@@ -23,10 +23,19 @@ LegoTransactionMgr::LegoTransactionMgr(LegoUniverse *universe) :
     _universe(universe),
     _xaIds(0),
     _xa(NULL),
-    _reqID(0)
+    _reqID(0),
+    _done(false),
+    _dispatcher(&LegoTransactionMgr::_Dispatch, this),
+    _catchup(false)
 {
     srand48(time(NULL));
     _clientID = lrand48();
+}
+
+LegoTransactionMgr::~LegoTransactionMgr()
+{
+    _done = true;
+    _dispatcher.join();
 }
 
 void
@@ -46,7 +55,7 @@ void
 LegoTransactionMgr::CloseTransaction()
 {
     assert(_xa != NULL);
-    _ExecuteXa(*_xa);
+    _AddToQueue(*_xa);
     delete _xa;
     _xa = NULL;
 }
@@ -73,7 +82,7 @@ LegoTransactionMgr::ExecuteOp(const LegoOp &op)
         // Network is up and active; send transaction as usual
         LegoTransaction xa;
         xa.AddOp(op);
-        success = _ExecuteXa(xa);
+        _AddToQueue(xa);
     }
 
     return success;
@@ -82,12 +91,17 @@ LegoTransactionMgr::ExecuteOp(const LegoOp &op)
 bool
 LegoTransactionMgr::_ExecuteXa(const LegoTransaction &xa)
 {
+    // std::cerr << "INFO: Executing xa\n";
+
     if (xa.GetOps().empty()) {
+        // std::cerr << "INFO: EMPTY!\n";
         return false;
     }
 
     // Send transaction to server
+    // std::cerr << "INFO: Sending to sever\n";
     std::string response = _SendToServer(xa);
+    // std
 
     if (response.empty()) {
         return false;
@@ -114,7 +128,7 @@ LegoTransactionMgr::_ExecuteXa(const LegoTransaction &xa)
 void
 LegoTransactionMgr::Sync()
 {
-    _ExecuteXa(_offlineXa);
+    _AddToQueue(_offlineXa);
     _offlineXa.Clear();
 }
 
@@ -129,9 +143,9 @@ LegoTransactionMgr::_SendToServer(const LegoTransaction &xa)
 
     // Send over wire
     std::string msg = os.str();
-    SfDPrintf(1, "Sending transaction:\n%s", msg.c_str());
+    SfDPrintf(2, "Sending transaction:\n%s", msg.c_str());
     std::string response = _SendMessage(msg);
-    SfDPrintf(1, "Got response:\n%s", response.c_str());
+    SfDPrintf(2, "Got response:\n%s", response.c_str());
 
     return response;
 }
@@ -140,8 +154,12 @@ LegoTransactionMgr::_SendToServer(const LegoTransaction &xa)
 void
 LegoTransactionMgr::_EmitXaPrologue(std::ostream &os)
 {
+    _xaIdLock.lock();
+
     // Assign transaction id
     uint64_t xaID = _xaIds;
+
+    _xaIdLock.unlock();
 
     int64_t clientID = _clientID;
     int64_t reqID = _reqID++;
@@ -174,7 +192,7 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
     //
     // '*' is the sentinel that represents end of transaction
     // '#' is the sentinel that represents end of response
-    SfDPrintf(1, "Parsing response:\n");
+    SfDPrintf(2, "Parsing response:\n");
     int numXas = 0;
     while (is.good()) {
         // Skip white space or/and newline
@@ -187,24 +205,24 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
         // Parse namespace id
         int recNamespace;
         is >> recNamespace;
-        SfDPrintf(1, "Namespace: %d\n", recNamespace);
+        SfDPrintf(2, "Namespace: %d\n", recNamespace);
 
         // Parse transaction id
         int64_t recXaID;
         is >> recXaID;
-        SfDPrintf(1, "XaID: %d\n", recXaID);
+        SfDPrintf(2, "XaID: %d\n", recXaID);
 
-#if 0
         if (recXaID >= _xaIds) {
+            _xaIdLock.lock();
             _xaIds = recXaID + 1;
+            _xaIdLock.unlock();
         }
-#endif
 
         // Parse at-most-once tokens
         int64_t clientID, reqID;
         is >> clientID;
         is >> reqID;
-        SfDPrintf(1, "Client ID %ld, Req ID %ld\n", clientID, reqID);
+        SfDPrintf(2, "Client ID %ld, Req ID %ld\n", clientID, reqID);
 
         // Skip white space or/and newline
         _SkipWhiteSpace(is);
@@ -221,7 +239,7 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
             // Read op line
             char buffer[4096];
             is.getline(buffer, sizeof(buffer));
-            SfDPrintf(1, "Read line: %s\n", buffer);
+            SfDPrintf(2, "Read line: %s\n", buffer);
 
             // Deserialize op
             std::istringstream ops(buffer);
@@ -239,13 +257,13 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
         serverLog->push_back(recXa);
         ++numXas;
     }
-    SfDPrintf(1, "Parsed %d\n", numXas);
+    SfDPrintf(2, "Parsed %d\n", numXas);
 }
 
 std::string
 LegoTransactionMgr::_SendMessage(const std::string &message)
 {
-    SfDPrintf(0, "Sending message to server:\n%s", message.c_str());
+    SfDPrintf(1, "Sending message to server:\n%s", message.c_str());
 
     QByteArray postData;
     postData.append(message.c_str());
@@ -270,7 +288,7 @@ LegoTransactionMgr::_SendMessage(const std::string &message)
     std::string response =
         QTextCodec::codecForHtml(rawData)->toUnicode(rawData).toStdString();
 
-    SfDPrintf(0, "Got response:\n%s", response.c_str());
+    SfDPrintf(1, "Got response:\n%s", response.c_str());
 
     return response;
 }
@@ -285,20 +303,19 @@ LegoTransactionMgr::_ExecuteXas(const std::vector<LegoTransaction> &xas)
     int numXas = 0;
     for (const auto &xa : xas) {
         uint64_t xaID = xa.GetID();
-        if (xaID != uint64_t(-1) && xaID < _xaIds) {
+        if (xaID != uint64_t(-1) && _xaIds > 0 && xaID < _xaIds - 1) {
             std::cerr << "Skipping a stale transaction\n";
             continue;
         }
 
         _ExecuteXaOps(xa);
-        ++_xaIds;
         ++numXas;
         _xas.push_back(xa);
         std::ostringstream os;
         xa.Serialize(os);
         LegoTransactionProcessed(os.str()).Send();
     }
-    SfDPrintf(1, "Executed %d transactions\n", numXas);
+    SfDPrintf(2, "Executed %d transactions\n", numXas);
 
     return numXas;
 }
@@ -373,6 +390,15 @@ LegoTransactionMgr::CatchupWithServer()
     if (!_network) {
         return;
     }
+    _catchup = true;
+}
+
+void
+LegoTransactionMgr::_CatchupWithServer()
+{
+    if (!_network) {
+        return;
+    }
 
     // Request all transactions since the last one we've executed.
     //
@@ -393,9 +419,57 @@ LegoTransactionMgr::CatchupWithServer()
     std::istringstream is(response);
     std::vector<LegoTransaction> serverLog;
     _ParseResponse(is, &serverLog);
-    SfDPrintf(1, "Received %d transactions from server\n", serverLog.size());
+    SfDPrintf(2, "Received %d transactions from server\n", serverLog.size());
     int numXas = _ExecuteXas(serverLog);
     if (numXas != 0) {
         LegoBricksChangedNotice().Send();
     }
+}
+
+void
+LegoTransactionMgr::_AddToQueue(const LegoTransaction &xa)
+{
+    _lock.lock();
+    _queue.push_back(xa);
+    _lock.unlock();
+}
+
+void
+LegoTransactionMgr::_Dispatch()
+{
+    while (!_done) {
+        if (_catchup) {
+            _catchup = false;
+            _CatchupWithServer();
+        }
+        if (!_queue.empty()) {
+            _lock.lock();
+            if (!_queue.empty()) {
+                LegoTransaction xa = _queue.front();
+                // std::cerr << "INFO: Pulling an xa with " << xa.GetOps().size() << "ops \n";
+                _queue.pop_front();
+                _lock.unlock();
+                if (_IsValid(xa)) {
+                    _ExecuteXa(xa);
+                }
+            } else {
+                _lock.unlock();
+            }
+        } else {
+            std::this_thread::yield();
+            continue;
+        }
+    }
+}
+
+bool
+LegoTransactionMgr::_IsValid(const LegoTransaction &xa)
+{
+    const auto &ops = xa.GetOps();
+    for (const auto &op : ops) {
+        if (!_universe->IsValid(op)) {
+            return false;
+        }
+    }
+    return true;
 }

@@ -31,15 +31,14 @@ class LegoMainWindow : public QMainWindow
 
   protected slots:
     void _ImportModels();
-    void _AddBrick();
     void _NewOp();
     void _DumpScenegraph();
-    void _PollTimer();
     void _PollServer();
     void _SetNetworkEnabled(bool enabled);
     void _SelectMode();
     void _ViewMode();
     void _NewUniverse();
+    void _SetGravityEnabled(bool enabled);
 
   private:
     void _RegisterNoticeHandlers();
@@ -52,6 +51,7 @@ class LegoMainWindow : public QMainWindow
     QStackedWidget             *_stackedViewWidget;
     QTimer                     *_timer;
     std::vector<SfNoticeMgr::Key> _noticeKeys;
+    bool                       _polling;
 };
 
 #endif // __MAIN_WINDOW_H__

@@ -59,6 +59,10 @@ class LegoApp {
 
     void SetViewerMode(ViewerMode viewerMode);
 
+    void SetGravityEnabled(bool enabled);
+
+    bool IsGravityEnabled() const;
+
     void DumpScenegraph();
 
   private:
@@ -106,6 +110,10 @@ class LegoApp {
 
     void _HandleDelete(const SoPickedPoint *pickedPoint);
 
+    static void _UpdateCB(void *userData, SoSensor *sensor);
+
+    void _Update();
+
     std::vector<SfNoticeMgr::Key> _noticeKeys;
 
     MfVec3i                     _worldSize;
@@ -142,6 +150,8 @@ class LegoApp {
     bool                        _flash;
     bool                        _shiftDown;
     bool                        _ctrlDown;
+    SoOneShotSensor            *_updateSensor;
+    bool                        _bricksDirty;
 };
 
 #endif // __LEGO_APP_H__

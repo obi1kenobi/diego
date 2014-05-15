@@ -18,6 +18,18 @@ class LegoBrick {
         WEST,
     };
 
+    void ResetMark() {
+        _marked = false;
+    }
+
+    void Mark() {
+        _marked = true;
+    }
+
+    bool IsMarked() const {
+        return _marked;
+    }
+
     bool Destroy();
 
     int64_t GetID() const {
@@ -83,6 +95,7 @@ class LegoBrick {
     MfVec3i _size;
     uint32_t _orientation;
     MfVec3f _color;
+    bool _marked;
 };
 
 #endif // LEGO_BRICK_H

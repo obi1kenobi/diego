@@ -22,7 +22,8 @@ LegoApp::LegoApp(LegoMainWindow *mainWindow) :
     _flashAlarm(NULL),
     _flash(false),
     _shiftDown(false),
-    _ctrlDown(false)
+    _ctrlDown(false),
+    _bricksDirty(false)
 {
     // Initialize the SoQt library first. 
     SoDB::init();
@@ -250,6 +251,9 @@ LegoApp::_CreateScene()
     beginRenderCB->setCallback(_BeginRenderSceneCB, cbData);
     _viewerRoot->addChild(beginRenderCB);
     _viewerRoot->addChild(_sceneRoot);
+
+    _updateSensor = new SoOneShotSensor(&LegoApp::_UpdateCB, this);
+    _updateSensor->schedule();
 }
 
 SoSeparator *
@@ -506,7 +510,7 @@ LegoApp::_AddBrick(LegoBrick *brick,
 void
 LegoApp::_ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &)
 {
-    _BuildBricks();
+    _bricksDirty = true;
 }
 
 void
@@ -803,7 +807,9 @@ LegoApp::_HandleDelete(const SoPickedPoint *pickedPoint)
     }
 
     LegoBrick *brick = _universe->GetBrick(centerPoint);
-    assert(brick);
+    if (!brick) {
+        return;
+    }
     brick->Destroy();
 
     LegoBricksChangedNotice().Send();
@@ -828,4 +834,33 @@ void
 LegoApp::NewUniverse()
 {
     _universe->NewUniverse();
+}
+
+void
+LegoApp::SetGravityEnabled(bool enabled)
+{
+    _universe->SetGravityEnabled(enabled);
+}
+
+bool
+LegoApp::IsGravityEnabled() const
+{
+    return _universe->IsGravityEnabled();
+}
+
+void
+LegoApp::_UpdateCB(void *userData, SoSensor *sensor)
+{
+    LegoApp *This = reinterpret_cast<LegoApp*>(userData);
+    This->_Update();
+    This->_updateSensor->schedule();
+}
+
+void
+LegoApp::_Update()
+{
+    if (_bricksDirty) {
+        _BuildBricks();
+        _bricksDirty = false;
+    }
 }

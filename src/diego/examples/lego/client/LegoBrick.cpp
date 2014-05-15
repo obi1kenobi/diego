@@ -18,7 +18,8 @@ LegoBrick::LegoBrick(LegoUniverse *universe,
     _position(position),
     _size(size),
     _orientation(orientation),
-    _color(color)
+    _color(color),
+    _marked(false)
 {
 }
 
