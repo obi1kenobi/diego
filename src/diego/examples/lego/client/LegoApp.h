@@ -70,7 +70,7 @@ class LegoApp {
 
     void _CreateScene();
 
-    SoSeparator * _CreatePlatformBed();
+    SoSeparator * _CreateGroundPlane();
 
     void _BuildBricks();
 

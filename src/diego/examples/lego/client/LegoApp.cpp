@@ -216,8 +216,8 @@ LegoApp::_CreateScene()
     _sceneEnv->addChild(mtlEnv);
 
     // Create scene environment: a ground plane
-    SoSeparator *platformRoot = _CreatePlatformBed();
-    _sceneEnv->addChild(platformRoot);
+    SoSeparator *groundPlaneRoot = _CreateGroundPlane();
+    _sceneEnv->addChild(groundPlaneRoot);
 
     SoShadowStyle *envNoShadow = new SoShadowStyle();
     envNoShadow->style.setValue(SoShadowStyle::NO_SHADOWING);
@@ -249,7 +249,7 @@ LegoApp::_CreateScene()
 }
 
 SoSeparator *
-LegoApp::_CreatePlatformBed()
+LegoApp::_CreateGroundPlane()
 {
     if (!_platformRoot) {
         _platformRoot = new SoSeparator();
@@ -508,6 +508,10 @@ LegoApp::_ProcessLegoBricksChangedNotice(const LegoBricksChangedNotice &)
 void
 LegoApp::_BuildBricks()
 {
+    // For efficiency, we keep all bricks in a single mesh. Each brick is
+    // represented as a cube. The top face is textured with a lego brick
+    // texture. Each face is also colored, so, the final color is the
+    // result of modulating the texture with the face color.
     if (_brickVP->texCoord.getNum() == 0) {
         _brickVP->texCoord.setNum(4);
         SbVec2f *texCoords = _brickVP->texCoord.startEditing();
