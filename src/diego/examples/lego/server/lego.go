@@ -3,7 +3,6 @@ package server
 import "container/list"
 import "diego/debug"
 import "diego/types"
-import "fmt"
 
 func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transaction) {
   xa := t.(*LegoTransaction)
@@ -27,9 +26,8 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
       }
       universe.insertBrick(brick)
 
-      debug.DPrintf(0, "Inserted brick id %d at position = %v",
+      debug.DPrintf(1, "Inserted brick id %d at position = %v",
                     brickId, op.Position.Data)
-      fmt.Printf("Created brick id %d\n", brickId)
     } else {
       brick, ok := universe.bricks[op.BrickID]
       debug.Assert(ok, "BrickID %d not found\n", op.BrickID)
@@ -37,7 +35,6 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
       switch op.OpType {
       case LegoOpDeleteBrick:
         debug.DPrintf(1, "Deleting brick with id %d\n", op.BrickID)
-        fmt.Printf("Destroyed brick id %d\n", op.BrickID)
         universe.deleteBrick(brick)
       case LegoOpModifyBrickPosition:
         debug.DPrintf(1, "Modify brick id %d position to %d %d %d\n", op.BrickID,
