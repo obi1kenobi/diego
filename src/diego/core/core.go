@@ -119,9 +119,11 @@ func (dc *DiegoCore) robustGetNamespace(ns string) *resolver.Resolver {
 
 func (dc *DiegoCore) robustHackCreateResolver(ns string) (rs *resolver.Resolver) {
   defer func () {
-    if r := recover(); r != nil && debugPanic {
-      debug.DPrintf(0, "%v", r)
-      rs = nil
+    if debugPanic {
+      if r := recover(); r != nil {
+        debug.DPrintf(0, "%v", r)
+        rs = nil
+      }
     }
   }()
   return resolver.CreateResolver(dc.makeState, dc.trailingDistance, dc.makeResolverDurablePath(ns))
