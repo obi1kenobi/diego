@@ -7,7 +7,6 @@
 #include "LegoNotices.h"
 
 #include <QtCore/QEventLoop>
-#include <QtCore/QMutexLocker>
 #include <QtCore/QObject>
 #include <QtCore/QTextCodec>
 #include <QtNetwork/QNetworkRequest>
@@ -24,8 +23,7 @@ LegoTransactionMgr::LegoTransactionMgr(LegoUniverse *universe) :
     _universe(universe),
     _xaIds(0),
     _xa(NULL),
-    _reqID(0),
-    _executing(false)
+    _reqID(0)
 {
     srand48(time(NULL));
     _clientID = lrand48();
@@ -60,13 +58,6 @@ LegoTransactionMgr::ExecuteOp(const LegoOp &op)
         return false;
     }
 
-    if (_executing) {
-        return false;
-    }
-
-    QMutexLocker autoLocker(&_lock);
-    _executing = true;
-
     bool success = false;
     if (!_network) {
         // Execute locally and keep track of ops we need to send to server
@@ -85,7 +76,6 @@ LegoTransactionMgr::ExecuteOp(const LegoOp &op)
         success = _ExecuteXa(xa);
     }
 
-    _executing = false;
     return success;
 }
 
@@ -203,9 +193,12 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
         int64_t recXaID;
         is >> recXaID;
         SfDPrintf(1, "XaID: %d\n", recXaID);
+
+#if 0
         if (recXaID >= _xaIds) {
             _xaIds = recXaID + 1;
         }
+#endif
 
         // Parse at-most-once tokens
         int64_t clientID, reqID;
@@ -217,6 +210,7 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
         _SkipWhiteSpace(is);
 
         LegoTransaction recXa;
+        recXa.SetID(recXaID);
         while (is.good()) {
             // Check for "end of ops" sentinel
             if (is.peek() == '*') {
@@ -290,7 +284,14 @@ LegoTransactionMgr::_ExecuteXas(const std::vector<LegoTransaction> &xas)
 
     int numXas = 0;
     for (const auto &xa : xas) {
+        uint64_t xaID = xa.GetID();
+        if (xaID != uint64_t(-1) && xaID < _xaIds) {
+            std::cerr << "Skipping a stale transaction\n";
+            continue;
+        }
+
         _ExecuteXaOps(xa);
+        ++_xaIds;
         ++numXas;
         _xas.push_back(xa);
         std::ostringstream os;
@@ -325,6 +326,7 @@ LegoTransactionMgr::_ExecuteOp(const LegoOp &op, bool doNotify)
             std::cerr << "ERROR: Unknown brick id " << op.GetBrickID() << "\n";
             return;
         }
+        _universe->_WriteBrick(brick->GetPosition(), brick->GetSize(), 0);
         switch (op.GetType()) {
         case LegoOp::MODIFY_BRICK_POSITION: {
             brick->_SetPosition(op.GetPosition());
@@ -345,6 +347,11 @@ LegoTransactionMgr::_ExecuteOp(const LegoOp &op, bool doNotify)
             std::cerr << "FATAL: Unknown op\n";
             throw std::exception();
         }
+        if (op.GetType() != LegoOp::DELETE_BRICK) {
+            _universe->_WriteBrick(brick->GetPosition(), 
+                                   brick->GetSize(),
+                                   brick->GetID());
+        }
     }
 
     if (doNotify) {
@@ -363,16 +370,9 @@ LegoTransactionMgr::_SkipWhiteSpace(std::istream &input)
 void
 LegoTransactionMgr::CatchupWithServer()
 {
-    if (_executing) {
-        return;
-    }
-
     if (!_network) {
         return;
     }
-
-    QMutexLocker autoLocker(&_lock);
-    _executing = true;
 
     // Request all transactions since the last one we've executed.
     //
@@ -398,6 +398,4 @@ LegoTransactionMgr::CatchupWithServer()
     if (numXas != 0) {
         LegoBricksChangedNotice().Send();
     }
-
-    _executing = false;
 }

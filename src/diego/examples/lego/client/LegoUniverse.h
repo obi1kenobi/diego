@@ -4,8 +4,6 @@
 #include "LegoBrick.h"
 #include "LegoTransactionMgr.h"
 
-#include <QtCore/QMutex>
-
 #include <cassert>
 #include <mutex>
 #include <unordered_map>
@@ -160,8 +158,6 @@ class LegoUniverse {
     SelectionMap _selection;
 
     _State _snapshot;
-
-    QMutex _lockProcessOps;
 };
 
 #endif // LEGO_UNIVERSE_H

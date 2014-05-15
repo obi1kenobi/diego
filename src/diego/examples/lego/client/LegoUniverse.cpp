@@ -5,8 +5,6 @@
 #include "LegoTransaction.h"
 #include "Vec3d.h"
 
-#include <QtCore/QMutexLocker>
-
 #include <iostream>
 
 MfVec3f LegoUniverse::COLORS[LegoUniverse::NUM_COLORS] = {
@@ -67,8 +65,6 @@ LegoUniverse::CatchupWithServer()
 bool
 LegoUniverse::ProcessOp(const std::string &opText)
 {
-    // QMutexLocker autoLock(&_lockProcessOps);
-
     std::istringstream ops(opText);
     LegoOp op(ops);
     if (!op.IsValid()) {
