@@ -6,6 +6,7 @@ import "net/http"
 import "diego/debug"
 import "diego/core"
 import "diego/examples/lego/server"
+import "encoding/gob"
 import "fmt"
 
 var dc *core.DiegoCore
@@ -13,8 +14,10 @@ var dc *core.DiegoCore
 const address = ":8080"
 
 func main() {
+  gob.Register(&server.LegoTransaction{})
+
   debug.DPrintf(0, "Creating diego...")
-  dc = core.CreateDiegoCore(500, server.MakeState, "")
+  dc = core.CreateDiegoCore(10000, server.MakeState, "LegoStorage")
   debug.DPrintf(0, "Done.")
 
   debug.DPrintf(0, "Launching httpd...")
@@ -35,7 +38,7 @@ func legoConnectionHandler(w http.ResponseWriter, r *http.Request) {
 
   buf := bytes.NewBuffer(b)
 
-  debug.DPrintf(2, "Got message: %v\n", buf)
+  debug.DPrintf(0, "Got message: %v\n", buf)
 
   command, err := buf.ReadString('\n')
   debug.EnsureNoError(err)

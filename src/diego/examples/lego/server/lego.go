@@ -27,8 +27,8 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
       }
       universe.insertBrick(brick)
 
-      debug.DPrintf(1, "Inserted brick id %d at position = %v",
-                    brickId, op.Position.data)
+      debug.DPrintf(0, "Inserted brick id %d at position = %v",
+                    brickId, op.Position.Data)
       fmt.Printf("Created brick id %d\n", brickId)
     } else {
       brick, ok := universe.bricks[op.BrickID]
@@ -41,11 +41,11 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
         universe.deleteBrick(brick)
       case LegoOpModifyBrickPosition:
         debug.DPrintf(1, "Modify brick id %d position to %d %d %d\n", op.BrickID,
-                      op.Position.data[0], op.Position.data[1], op.Position.data[2])
+                      op.Position.Data[0], op.Position.Data[1], op.Position.Data[2])
         universe.moveBrick(brick, op.Position)
       case LegoOpModifyBrickColor:
         debug.DPrintf(1, "Modify brick id %d color to %f %f %f\n", op.BrickID,
-                      op.Color.data[0], op.Color.data[1], op.Color.data[2])
+                      op.Color.Data[0], op.Color.Data[1], op.Color.Data[2])
         brick.Color = op.Color
       case LegoOpModifyBrickOrientation:
         debug.DPrintf(1, "Modify brick id %d orientation to %s\n", op.BrickID,
@@ -53,7 +53,7 @@ func (universe *LegoUniverse) Apply(t types.Transaction) (bool, types.Transactio
         brick.Orientation = op.Orientation
       case LegoOpModifyBrickSize:
         debug.DPrintf(1, "Modify brick id %d size to %d %d %d\n", op.BrickID,
-                      op.Size.data[0], op.Size.data[1], op.Size.data[2])
+                      op.Size.Data[0], op.Size.Data[1], op.Size.Data[2])
         universe.resizeBrick(brick, op.Size)
       default:
         debug.Assert(false, "Found invalid op: %v", op)

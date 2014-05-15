@@ -25,20 +25,20 @@ func (universe *LegoUniverse) Id() int64 {
 
 func validateBrickPosition(position Vec3i) {
   for i := 0; i < 3; i++ {
-    debug.Assert(position.data[i] >= legoGridMin[i],
+    debug.Assert(position.Data[i] >= legoGridMin[i],
                  "Invalid grid position %d %d %d",
-                 position.data[0], position.data[1], position.data[2])
-    debug.Assert(position.data[i] <= legoGridMax[i],
+                 position.Data[0], position.Data[1], position.Data[2])
+    debug.Assert(position.Data[i] <= legoGridMax[i],
                  "Invalid grid position %d %d %d",
-                 position.data[0], position.data[1], position.data[2])
+                 position.Data[0], position.Data[1], position.Data[2])
   }
 }
 
 func (universe *LegoUniverse) validateBrickFootprint(id int64, position Vec3i, size Vec3i) bool {
   for i := 0; i < 3; i++ {
-    for j := position.data[i]; j < position.data[i] + size.data[i]; j++ {
+    for j := position.Data[i]; j < position.Data[i] + size.Data[i]; j++ {
       query := position
-      query.data[i] = j
+      query.Data[i] = j
       brickId := universe.GetBrickIdAtPosition(query)
       if brickId != id {
         return false
@@ -49,9 +49,9 @@ func (universe *LegoUniverse) validateBrickFootprint(id int64, position Vec3i, s
 }
 
 func getGridIndex(position Vec3i) (int32, int32, int32) {
-  x := position.data[0] - legoGridMin[0]
-  y := position.data[1] - legoGridMin[1]
-  z := position.data[2] - legoGridMin[2]
+  x := position.Data[0] - legoGridMin[0]
+  y := position.Data[1] - legoGridMin[1]
+  z := position.Data[2] - legoGridMin[2]
   return x, y, z
 }
 
@@ -87,9 +87,9 @@ func (universe *LegoUniverse) canWriteBrick(position Vec3i, size Vec3i) bool {
   validateBrickPosition(position)
 
   startX, startY, startZ := getGridIndex(position)
-  endX := startX + size.data[0]
-  endY := startY + size.data[1]
-  endZ := startZ + size.data[2]
+  endX := startX + size.Data[0]
+  endY := startY + size.Data[1]
+  endZ := startZ + size.Data[2]
   for x := startX; x < endX; x++ {
     for y := startY; y < endY; y++ {
       for z := startZ; z < endZ; z++ {
@@ -106,9 +106,9 @@ func (universe *LegoUniverse) writeBrick(id int64, position Vec3i, size Vec3i) {
   validateBrickPosition(position)
 
   startX, startY, startZ := getGridIndex(position)
-  endX := startX + size.data[0]
-  endY := startY + size.data[1]
-  endZ := startZ + size.data[2]
+  endX := startX + size.Data[0]
+  endY := startY + size.Data[1]
+  endZ := startZ + size.Data[2]
   for x := startX; x < endX; x++ {
     for y := startY; y < endY; y++ {
       for z := startZ; z < endZ; z++ {

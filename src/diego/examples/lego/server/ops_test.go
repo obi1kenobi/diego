@@ -69,11 +69,11 @@ func checkBrick(t *testing.T,
              brickId, expectedSize, brick.Size)
     return false
   }
-  start := []int32{ expectedPosition.data[0], expectedPosition.data[1], expectedPosition.data[2] }
+  start := []int32{ expectedPosition.Data[0], expectedPosition.Data[1], expectedPosition.Data[2] }
   end := []int32{
-    start[0] + brick.Size.data[0],
-    start[1] + brick.Size.data[1],
-    start[2] + brick.Size.data[2],
+    start[0] + brick.Size.Data[0],
+    start[1] + brick.Size.Data[1],
+    start[2] + brick.Size.Data[2],
   }
   for x := start[0]; x < end[0]; x++ {
     for y := start[1]; y < end[1]; y++ {
@@ -114,13 +114,13 @@ func legoCreatePredicate(expectedResult tests.TransactionResult,
       universe := s.(*LegoUniverse)
 
       // Did something get inserted?
-      for x := op.Position.data[0]; x < op.Position.data[0] + op.Size.data[0]; x++ {
-        for y := op.Position.data[1]; y < op.Position.data[1] + op.Size.data[1]; y++ {
-          for z := op.Position.data[2]; z < op.Position.data[2] + op.Size.data[2]; z++ {
+      for x := op.Position.Data[0]; x < op.Position.Data[0] + op.Size.Data[0]; x++ {
+        for y := op.Position.Data[1]; y < op.Position.Data[1] + op.Size.Data[1]; y++ {
+          for z := op.Position.Data[2]; z < op.Position.Data[2] + op.Size.Data[2]; z++ {
             id := universe.GetBrickIdAtPosition(MakeVec3i(x, y, z))
               if id < 1 {
                 t.Errorf("No brick was inserted at position %d %d %d\n",
-                        op.Position.data[0], op.Position.data[1], op.Position.data[2])
+                        op.Position.Data[0], op.Position.Data[1], op.Position.Data[2])
                   return false
               }
               // Does the brick match the one we are inserting?
