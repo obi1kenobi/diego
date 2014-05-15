@@ -53,6 +53,9 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     connect(_ui->actionNetwork, 
             SIGNAL(triggered(bool)), this,
             SLOT(_SetNetworkEnabled(bool)));
+    connect(this, 
+            SIGNAL(_PollServerSignal()), this, 
+            SLOT(_PollServer()));
 
     _RegisterNoticeHandlers();
 }
@@ -111,7 +114,7 @@ LegoMainWindow::_Initialize()
 #endif
 
     // Timer for polling
-    connect(_timer, SIGNAL(timeout()), this, SLOT(_PollServer()));
+    connect(_timer, SIGNAL(timeout()), this, SLOT(_PollTimer()));
     _timer->start(LEGO_POLL_INTERVAL);
 }
 
@@ -160,6 +163,12 @@ LegoMainWindow::_ImportModels()
     _app->ImportModels(models);
 
     _timer->start(LEGO_POLL_INTERVAL);
+}
+
+void
+LegoMainWindow::_PollTimer()
+{
+    emit _PollServerSignal();
 }
 
 void

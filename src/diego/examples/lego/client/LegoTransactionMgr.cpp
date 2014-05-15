@@ -7,6 +7,7 @@
 #include "LegoNotices.h"
 
 #include <QtCore/QEventLoop>
+#include <QtCore/QMutexLocker>
 #include <QtCore/QObject>
 #include <QtCore/QTextCodec>
 #include <QtNetwork/QNetworkRequest>
@@ -23,7 +24,8 @@ LegoTransactionMgr::LegoTransactionMgr(LegoUniverse *universe) :
     _universe(universe),
     _xaIds(0),
     _xa(NULL),
-    _reqID(0)
+    _reqID(0),
+    _executing(false)
 {
     srand48(time(NULL));
     _clientID = lrand48();
@@ -58,8 +60,21 @@ LegoTransactionMgr::ExecuteOp(const LegoOp &op)
         return false;
     }
 
+    if (_executing) {
+        return false;
+    }
+
+    QMutexLocker autoLocker(&_lock);
+    _executing = true;
+
     bool success = false;
-    if (_xa) {
+    if (!_network) {
+        // Execute locally and keep track of ops we need to send to server
+        _offlineXa.AddOp(op);
+        bool doNotify = true;
+        _ExecuteOp(op, doNotify);
+        success = true;
+    } else if (_xa) {
         // Accumulating ops into a transaction for lazy execution
         _xa->AddOp(op);
         success = true;
@@ -68,14 +83,9 @@ LegoTransactionMgr::ExecuteOp(const LegoOp &op)
         LegoTransaction xa;
         xa.AddOp(op);
         success = _ExecuteXa(xa);
-    } else {
-        // Execute locally and keep track of ops we need to send to server
-        _offlineXa.AddOp(op);
-        bool doNotify = true;
-        _ExecuteOp(op, doNotify);
-        success = true;
     }
 
+    _executing = false;
     return success;
 }
 
@@ -241,7 +251,7 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
 std::string
 LegoTransactionMgr::_SendMessage(const std::string &message)
 {
-    SfDPrintf(1, "Sending message to server:\n%s", message.c_str());
+    SfDPrintf(0, "Sending message to server:\n%s", message.c_str());
 
     QByteArray postData;
     postData.append(message.c_str());
@@ -266,7 +276,7 @@ LegoTransactionMgr::_SendMessage(const std::string &message)
     std::string response =
         QTextCodec::codecForHtml(rawData)->toUnicode(rawData).toStdString();
 
-    SfDPrintf(1, "Got response:\n%s", response.c_str());
+    SfDPrintf(0, "Got response:\n%s", response.c_str());
 
     return response;
 }
@@ -353,9 +363,16 @@ LegoTransactionMgr::_SkipWhiteSpace(std::istream &input)
 void
 LegoTransactionMgr::CatchupWithServer()
 {
+    if (_executing) {
+        return;
+    }
+
     if (!_network) {
         return;
     }
+
+    QMutexLocker autoLocker(&_lock);
+    _executing = true;
 
     // Request all transactions since the last one we've executed.
     //
@@ -381,4 +398,6 @@ LegoTransactionMgr::CatchupWithServer()
     if (numXas != 0) {
         LegoBricksChangedNotice().Send();
     }
+
+    _executing = false;
 }

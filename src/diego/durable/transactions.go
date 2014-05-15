@@ -23,7 +23,7 @@ const directoryPerm = 0777
 const maxChunkLength = 1000
 const longLength = 8
 const expectedIndexFileLength = maxChunkLength * longLength
-const maxDataEntryLength = 16 * 1024
+const maxDataEntryLength = 1024 * 1024
 
 /*
 TransactionLogger - durable write-ahead log for transactions
@@ -341,13 +341,17 @@ func tryLoadExistingWriter(tl *TransactionLogger) {
 
   // verify file names and memoize data/index files
   for _, n := range names {
+    fmt.Printf("name is %s\n", n)
+
     sp := strings.SplitN(n, ".", 2)
     if len(sp) != 2 {
       panic(fmt.Sprintf("Unexpected file %s found at basePath %s", n, tl.basePath))
     }
 
+    fmt.Printf("Before ParseInt\n")
     index, err := strconv.ParseInt(sp[0], 0, 64)
     debug.EnsureNoError(err)
+    fmt.Printf("After ParseInt\n")
 
     if index < 0 {
       panic(fmt.Sprintf("Unexpected file index %s found at basePath %s", n, tl.basePath))

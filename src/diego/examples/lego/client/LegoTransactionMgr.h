@@ -1,8 +1,11 @@
 #ifndef LEGO_TRANSACTION_MGR_H
 #define LEGO_TRANSACTION_MGR_H
 
+#include <QtCore/QMutex>
+
 #include "LegoTransaction.h"
 
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -55,6 +58,9 @@ class LegoTransactionMgr {
 
     int64_t _clientID;
     int64_t _reqID;
+
+    QMutex _lock;
+    bool _executing;
 };
 
 #endif //  LEGO_TRANSACTION_MGR_H

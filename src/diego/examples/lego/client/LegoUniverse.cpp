@@ -5,6 +5,8 @@
 #include "LegoTransaction.h"
 #include "Vec3d.h"
 
+#include <QtCore/QMutexLocker>
+
 #include <iostream>
 
 MfVec3f LegoUniverse::COLORS[LegoUniverse::NUM_COLORS] = {
@@ -65,6 +67,8 @@ LegoUniverse::CatchupWithServer()
 bool
 LegoUniverse::ProcessOp(const std::string &opText)
 {
+    // QMutexLocker autoLock(&_lockProcessOps);
+
     std::istringstream ops(opText);
     LegoOp op(ops);
     if (!op.IsValid()) {
@@ -157,7 +161,7 @@ LegoUniverse::_CreateBrick(const MfVec3i &position,
     uint64_t brickID = _brickID;
     LegoBrick *brick = 
         new LegoBrick(this, brickID, position, size, orientation, color);
-    SfDPrintf(1, "Created brick id %lu\n", brickID);
+    SfDPrintf(0, "Created brick id %lu\n", brickID);
     _RecordBrick(brick);
 }
 
@@ -182,7 +186,7 @@ LegoUniverse::_DestroyBrick(LegoBrick *brick)
     _brickMap.erase(brick->GetID());
     _selection.erase(brick->GetID());
     _WriteBrick(brick->GetPosition(), brick->GetSize(), 0);
-    SfDPrintf(1, "Destroyed brick id %lu\n", brick->GetID());
+    SfDPrintf(0, "Destroyed brick id %lu\n", brick->GetID());
     delete brick;
 }
 

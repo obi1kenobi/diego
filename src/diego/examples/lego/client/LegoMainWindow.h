@@ -26,11 +26,15 @@ class LegoMainWindow : public QMainWindow
 
     virtual ~LegoMainWindow();
 
+  signals:
+    void _PollServerSignal();
+
   protected slots:
     void _ImportModels();
     void _AddBrick();
     void _NewOp();
     void _DumpScenegraph();
+    void _PollTimer();
     void _PollServer();
     void _SetNetworkEnabled(bool enabled);
     void _SelectMode();

@@ -211,15 +211,44 @@ LegoVoxelizer::Voxelize(GfTriangleMesh *mesh,
     int numBrickColors = sizeof(colors) / sizeof(colors[0]);
 
     _universe->GetTransactionMgr()->OpenTransaction();
+    bool brickMap[gridSize[0]][gridSize[1]][gridSize[2]];
+    memset(brickMap, 0, sizeof(brickMap));
     for (int x = 0; x < gridSize[0]; ++x) {
         for (int y = 0; y < gridSize[1]; ++y) {
             for (int z = 0; z < gridSize[2]; ++z) {
                 if (voxels[x][y][z].inside) {
+#if 0
+                    bool taken = false;
+                    for (int bx = 0; bx < 2; ++bx) {
+                        for (int by = 0; by < 2; ++by) {
+                            for (int bz = 0; bz < 1; ++bz) {
+                                if (brickMap[x + bx][y + by][z + bz]) {
+                                    taken = true;
+                                }
+                            }
+                        }
+                    }
+                    if (taken) {
+                        continue;
+                    }
+#endif
+
                     int whichColor = drand48() * numBrickColors;
                     _universe->CreateBrick(placementOrigin + MfVec3i(2 * x, 2 * y, z),
                                            MfVec3i(2, 2, 1),
                                            LegoBrick::EAST,
                                            colors[whichColor]);
+                    std::cerr << "CreateBrick " << 2 * x << ", " << 2 * y << ", " << z << std::endl;
+
+#if 0
+                    for (int bx = 0; bx < 2; ++bx) {
+                        for (int by = 0; by < 2; ++by) {
+                            for (int bz = 0; bz < 1; ++bz) {
+                                brickMap[x + bx][y + by][z + bz] = true;
+                            }
+                        }
+                    }
+#endif
                 }
             }
         }
