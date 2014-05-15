@@ -66,11 +66,6 @@ class LegoApp {
     void DumpScenegraph();
 
   private:
-    struct _CallbackData {
-        LegoApp *app;
-        int viewerIndex;
-    };
-
     void _CreateUniverse();
 
     void _CreateScene();
@@ -123,10 +118,9 @@ class LegoApp {
     MfVec3d                     _bedSize;
     LegoMainWindow             *_mainWindow;
     std::vector<QWidget*>       _viewerWidgets;
-    std::vector<SoQtViewer*>    _viewers;
+    SoQtExaminerViewer         *_viewer;
     SoSeparator                *_viewerRoot;
     LegoUniverse               *_universe;
-    std::vector<_CallbackData*> _cbData;
 
     SoSeparator                *_sceneRoot;
     SoShadowGroup              *_shadowGroup;

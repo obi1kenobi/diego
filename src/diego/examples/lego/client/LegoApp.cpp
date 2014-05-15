@@ -10,12 +10,17 @@
 
 #include <cassert>
 
+// If you want to change the world size, also modify it in server/universe.go
+static const MfVec3i gWorldSize(64, 64, 64);
+static const MfVec3i gWorldMin(-31, -31, 0);
+static const MfVec3i gWorldMax(32, 32, 63);
+
 LegoApp::LegoApp(LegoMainWindow *mainWindow) :
     _mainWindow(mainWindow),
     _universe(NULL),
-    _worldSize(64, 64, 64),
-    _worldMin(-31, -31, 0),
-    _worldMax(32, 32, 63),
+    _worldSize(gWorldSize),
+    _worldMin(gWorldMin),
+    _worldMax(gWorldMax),
     _bedSize(_worldSize[0], _worldSize[1], 1),
     _sceneRoot(NULL),
     _platformRoot(NULL),
@@ -25,7 +30,7 @@ LegoApp::LegoApp(LegoMainWindow *mainWindow) :
     _ctrlDown(false),
     _bricksDirty(false)
 {
-    // Initialize the SoQt library first. 
+    // Initialize the Coin/SoQt libraries first. 
     SoDB::init();
     SoQt::init(mainWindow);
 
@@ -51,50 +56,41 @@ LegoApp::ProcessOp(const std::string &op)
 void
 LegoApp::InitializeViewers(QWidget *, QWidget *parentWidget)
 {
-    assert(_viewerWidgets.empty());
-    _viewerWidgets.clear();
+    delete _viewer;
 
-    SoQtExaminerViewer *viewer = 
+    _viewer = 
         new SoQtExaminerViewer(parentWidget, NULL, true, 
                                SoQtFullViewer::BUILD_NONE, 
                                SoQtViewer::BROWSER);
-    viewer->setCameraType(SoPerspectiveCamera::getClassTypeId());
-    viewer->setBackgroundColor(SbColor(1, 1, 1));
+    _viewer->setCameraType(SoPerspectiveCamera::getClassTypeId());
+    _viewer->setBackgroundColor(SbColor(1, 1, 1));
 
-    SoDirectionalLight *headlight = viewer->getHeadlight();
+    SoDirectionalLight *headlight = _viewer->getHeadlight();
     headlight->intensity.setValue(0.8);
 
     // Careful; have to set up the scenegraph to a viewer before
     // retrieving the camera. It's the process of setting the
     // scenegraph that triggers the initial camera creation.
-    viewer->setSceneGraph(_viewerRoot);
-
-    // Initialize camera differently for each viewer to set up the
-    // following initial conditions:
-    // - viewer1 through viewer4 are straight camera viewers
-    // - fab preview viewer previews the results of fabrication
-    // - viewer1 and fab preview show a perspective view
-    // - viewer2-4 show an orthographic view
-    // XXX-desai: doesn't seem to have an effect
+    _viewer->setSceneGraph(_viewerRoot);
 
     // Z-up
     SbRotation zUp(SbVec3f(1, 0, 0), M_PI / 2.0);
 
-    SoCamera *camera = viewer->getCamera();
+    // Set up camera
+    SoCamera *camera = _viewer->getCamera();
     assert(camera);
     SoPerspectiveCamera *pcamera = dynamic_cast<SoPerspectiveCamera*>(camera);
     pcamera->nearDistance.setValue(1);
     pcamera->orientation.setValue(zUp * SbRotation(SbVec3f(1, 0, 0), -M_PI / 8.0f));
 
-    viewer->setDoubleBuffer(true);
-    viewer->show();
-    viewer->render();
+    _viewer->setDoubleBuffer(true);
+    _viewer->show();
+    _viewer->render();
 
-    // No geometry at the beginning, so, frame the platform bed
-    viewer->getCamera()->viewAll(_sceneEnv, viewer->getViewportRegion());
+    // Frame all
+    _viewer->getCamera()->viewAll(_sceneRoot, _viewer->getViewportRegion());
 
-    _viewerWidgets.push_back(viewer->getWidget());
-    _viewers.push_back(viewer);
+    _viewerWidgets.push_back(_viewer->getWidget());
 }
 
 void
@@ -243,12 +239,8 @@ LegoApp::_CreateScene()
     // ecb->addEventCallback(SoKeyboardEvent::getClassTypeId(), _EventCB, this);
     _viewerRoot->addChild(ecb);
 
-    _CallbackData *cbData = new _CallbackData();
-    cbData->app = this;
-    cbData->viewerIndex = 0;
-    _cbData.push_back(cbData);
     SoCallback *beginRenderCB = new SoCallback();
-    beginRenderCB->setCallback(_BeginRenderSceneCB, cbData);
+    beginRenderCB->setCallback(_BeginRenderSceneCB, this);
     _viewerRoot->addChild(beginRenderCB);
     _viewerRoot->addChild(_sceneRoot);
 
@@ -292,7 +284,7 @@ LegoApp::_BeginRenderSceneCB(void *userData, SoAction *action)
     if (action->isOfType(SoGLRenderAction::getClassTypeId())) {
         SoCacheElement::invalidate(action->getState());
 
-        _CallbackData *cbData = reinterpret_cast<_CallbackData*>(userData);
+        LegoApp *This = reinterpret_cast<LegoApp*>(userData);
 
         glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
@@ -315,7 +307,7 @@ LegoApp::_BeginRenderSceneCB(void *userData, SoAction *action)
         glDisable(GL_SCISSOR_TEST);
         glDisable(GL_CULL_FACE);
 
-        cbData->app->_DrawBackground();
+        This->_DrawBackground();
 
         glPopAttrib();
 
@@ -599,7 +591,7 @@ void
 LegoApp::SetNetworkEnabled(bool enabled)
 {
     _universe->SetNetworkEnabled(enabled);
-    _viewers[0]->scheduleRedraw();
+    _viewer->scheduleRedraw();
 }
 
 bool
@@ -820,10 +812,10 @@ LegoApp::SetViewerMode(ViewerMode viewerMode)
 {
     switch (viewerMode) {
     case VIEWER_MODE_SELECT:
-        _viewers[0]->setViewing(false);
+        _viewer->setViewing(false);
         break;
     case VIEWER_MODE_VIEW:
-        _viewers[0]->setViewing(true);
+        _viewer->setViewing(true);
         break;
     default:
         break;

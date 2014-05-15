@@ -28,7 +28,7 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     // Set up
     _ui->setupUi(this);
 
-    // We will store the viewers in here
+    // We will store the viewers in here (if we end up with more than one)
     _stackedViewWidget = new QStackedWidget();
     _ui->viewportsLayout->addWidget(_stackedViewWidget, 0, 0);
 
@@ -150,6 +150,7 @@ LegoMainWindow::_ImportModels()
 void
 LegoMainWindow::_PollServer()
 {
+    // Not thread safe but it won't be called outside of the main thread
     if (_app && !_polling) {
         _polling = true;
         _app->PollServer();
@@ -167,10 +168,8 @@ void
 LegoMainWindow::_ProcessTransactionProcessedNotice(
     const LegoTransactionProcessed &n)
 {
-#if 0
     _ui->logTextEdit->moveCursor(QTextCursor::End);
     _ui->logTextEdit->insertPlainText(n.Get().c_str());
-#endif
 }
 
 void

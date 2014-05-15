@@ -14,14 +14,14 @@ _SetStyle(QApplication *qapp)
     qapp->setStyle(QStyleFactory::create("fusion"));
 
     QPalette palette;
-    palette.setColor(QPalette::Window, QColor(53,53,53));
+    palette.setColor(QPalette::Window, QColor(53, 53, 53));
     palette.setColor(QPalette::WindowText, Qt::white);
-    palette.setColor(QPalette::Base, QColor(15,15,15));
-    palette.setColor(QPalette::AlternateBase, QColor(53,53,53));
+    palette.setColor(QPalette::Base, QColor(15, 15, 15));
+    palette.setColor(QPalette::AlternateBase, QColor(53, 53, 53));
     palette.setColor(QPalette::ToolTipBase, Qt::white);
     palette.setColor(QPalette::ToolTipText, Qt::white);
     palette.setColor(QPalette::Text, Qt::white);
-    palette.setColor(QPalette::Button, QColor(53,53,53));
+    palette.setColor(QPalette::Button, QColor(53, 53, 53));
     palette.setColor(QPalette::Active, QPalette::ButtonText, Qt::white);
     palette.setColor(QPalette::Inactive, QPalette::ButtonText, Qt::white);
     palette.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(128, 128, 128));
@@ -36,11 +36,6 @@ int main(int argc, char *argv[])
 {
     QApplication qapp(argc, argv);
     _SetStyle(&qapp);
-    // QStyleFactory::create("Fusion"));
-    // QFile qss("stylesheets/darkorange.qss");
-    // qss.open(QFile::ReadOnly);
-    // qapp.setStyleSheet(qss.readAll());
-    // qss.close();
 
     // XXX: Work around Qt bug #28816.
     // https://bugreports.qt-project.org/browse/QTBUG-28816
