@@ -43,10 +43,6 @@ LegoMainWindow::LegoMainWindow(QWidget *parent) :
     connect(_ui->actionNetwork, 
             SIGNAL(triggered(bool)), this,
             SLOT(_SetNetworkEnabled(bool)));
-
-    // Timer for polling
-    connect(_timer, SIGNAL(timeout()), this, SLOT(_PollServer()));
-    _timer->start(LEGO_POLL_INTERVAL);
 }
 
 LegoMainWindow::~LegoMainWindow()
@@ -82,6 +78,10 @@ LegoMainWindow::_Initialize()
             _ui->logTextEdit->insertPlainText(os.str().c_str());
         }
     }
+
+    // Timer for polling
+    connect(_timer, SIGNAL(timeout()), this, SLOT(_PollServer()));
+    _timer->start(LEGO_POLL_INTERVAL);
 }
 
 void
