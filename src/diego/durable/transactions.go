@@ -23,7 +23,7 @@ const directoryPerm = 0777
 const maxChunkLength = 1000
 const longLength = 8
 const expectedIndexFileLength = maxChunkLength * longLength
-const maxDataEntryLength = 16 * 1024
+const maxDataEntryLength = 1024 * 1024
 
 /*
 TransactionLogger - durable write-ahead log for transactions

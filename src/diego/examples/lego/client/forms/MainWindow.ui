@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1662</width>
-    <height>943</height>
+    <width>1538</width>
+    <height>966</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Foundry</string>
+   <string>DLego</string>
   </property>
   <property name="statusTip">
    <string/>
@@ -26,6 +26,12 @@
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
      <widget class="QSplitter" name="splitter">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
@@ -51,6 +57,12 @@
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <widget class="QLabel" name="logLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="text">
            <string>Log</string>
           </property>
@@ -58,26 +70,42 @@
         </item>
         <item>
          <widget class="QPlainTextEdit" name="logTextEdit">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="readOnly">
            <bool>true</bool>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="opBox"/>
+         <widget class="QLineEdit" name="opBox">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
       <widget class="QFrame" name="viewportsFrame">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+        <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
          <horstretch>4</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
        <property name="minimumSize">
         <size>
-         <width>800</width>
+         <width>400</width>
          <height>0</height>
         </size>
        </property>
@@ -89,41 +117,6 @@
        </property>
        <layout class="QGridLayout" name="viewportsLayout"/>
       </widget>
-      <widget class="QFrame" name="userListFrame">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-         <horstretch>1</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>300</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Raised</enum>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout">
-        <item>
-         <widget class="QLabel" name="userListLabel">
-          <property name="text">
-           <string>Users</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QListView" name="userListView"/>
-        </item>
-       </layout>
-      </widget>
      </widget>
     </item>
    </layout>
@@ -133,7 +126,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1662</width>
+     <width>1538</width>
      <height>22</height>
     </rect>
    </property>
@@ -141,7 +134,7 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionNewProject"/>
+    <addaction name="actionNewUniverse"/>
     <addaction name="separator"/>
     <addaction name="actionOpenProject"/>
     <addaction name="actionSaveProject"/>
@@ -169,7 +162,7 @@
     <property name="title">
      <string>Bricks</string>
     </property>
-    <addaction name="actionCreate_Brick"/>
+    <addaction name="actionGravity"/>
    </widget>
    <widget class="QMenu" name="menuDeveloper">
     <property name="title">
@@ -418,9 +411,9 @@
     <string>Backface Culling</string>
    </property>
   </action>
-  <action name="actionNewProject">
+  <action name="actionNewUniverse">
    <property name="text">
-    <string>New Project</string>
+    <string>New Universe</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
@@ -779,9 +772,15 @@
     <string>Volume Polygon Tumble</string>
    </property>
   </action>
-  <action name="actionCreate_Brick">
+  <action name="actionGravity">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Create Brick</string>
+    <string>Gravity</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
    </property>
   </action>
   <action name="actionDumpScenegraph">
@@ -798,6 +797,9 @@
    </property>
    <property name="text">
     <string>Network</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+K</string>
    </property>
   </action>
  </widget>

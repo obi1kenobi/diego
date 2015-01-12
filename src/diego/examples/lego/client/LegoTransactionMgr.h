@@ -3,7 +3,10 @@
 
 #include "LegoTransaction.h"
 
+#include <list>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 class LegoOp;
@@ -12,6 +15,8 @@ class LegoUniverse;
 class LegoTransactionMgr {
   public:
     LegoTransactionMgr(LegoUniverse *universe);
+
+    ~LegoTransactionMgr();
 
     void SetNetworkEnabled(bool enabled);
 
@@ -25,8 +30,12 @@ class LegoTransactionMgr {
 
     void CloseTransaction();
 
+    // If there is a transaction open, the op will get added to it.
+    // Otherwise, we wrap the op in its own transaction and send it to the
+    // server.
     bool ExecuteOp(const LegoOp &op);
 
+    // Sync up and see if anything has happened since the last poll.
     void CatchupWithServer();
 
     const std::vector<LegoTransaction> & GetLog() const {
@@ -34,6 +43,11 @@ class LegoTransactionMgr {
     }
 
   private:
+    void _AddToQueue(const LegoTransaction &xa);
+    void _Dispatch();
+    bool _IsValid(const LegoTransaction &xa);
+    void _CatchupWithServer();
+
     void _EmitXaPrologue(std::ostream &os);
     void _EmitXaEpilogue(std::ostream &os);
     std::string _SendToServer(const LegoTransaction &xa);
@@ -55,6 +69,15 @@ class LegoTransactionMgr {
 
     int64_t _clientID;
     int64_t _reqID;
+
+    bool _done;
+    std::thread _dispatcher;
+    std::list<LegoTransaction> _queue;
+    std::mutex _lock;
+
+    std::mutex _xaIdLock;
+
+    bool _catchup;
 };
 
 #endif //  LEGO_TRANSACTION_MGR_H

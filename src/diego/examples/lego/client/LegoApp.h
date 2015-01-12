@@ -22,10 +22,17 @@ class LegoConflictNotice;
 class LegoMainWindow;
 class LegoUniverse;
 class SoAlarmSensor;
+class SoEventCallback;
+class SoPickedPoint;
 class SoSensor;
 
 class LegoApp {
   public:
+     enum ViewerMode {
+       VIEWER_MODE_SELECT,
+       VIEWER_MODE_VIEW,
+     };
+
     LegoApp(LegoMainWindow *mainWindow);
 
     ~LegoApp();
@@ -35,6 +42,8 @@ class LegoApp {
     const std::vector<QWidget*> & GetViewerWidgets() const {
         return _viewerWidgets;
     }
+
+    void NewUniverse();
 
     bool ProcessOp(const std::string &op);
 
@@ -48,19 +57,20 @@ class LegoApp {
 
     bool IsNetworkEnabled() const;
 
+    void SetViewerMode(ViewerMode viewerMode);
+
+    void SetGravityEnabled(bool enabled);
+
+    bool IsGravityEnabled() const;
+
     void DumpScenegraph();
 
   private:
-    struct _CallbackData {
-        LegoApp *app;
-        int viewerIndex;
-    };
-
     void _CreateUniverse();
 
     void _CreateScene();
 
-    SoSeparator * _CreatePlatformBed();
+    SoSeparator * _CreateGroundPlane();
 
     void _BuildBricks();
 
@@ -79,12 +89,25 @@ class LegoApp {
     void _AddBrick(LegoBrick *brick,
                    uint32_t brickIndex,
                    SbVec3f *coords,
-                   SbVec3f *colors,
+                   uint32_t *colors,
                    int32_t *indices,
                    int32_t *matIndices,
-                   int32_t *texIndices);
+                   int32_t *texIndices,
+                   bool selected);
 
     static void _ToggleFlash(void *userData, SoSensor *sensor);
+
+    static void _EventCB(void *userData, SoEventCallback *eventCB);
+
+    void _HandleSelect(const SoPickedPoint *pickedPoint);
+
+    void _HandleCreate(const SoPickedPoint *pickedPoint);
+
+    void _HandleDelete(const SoPickedPoint *pickedPoint);
+
+    static void _UpdateCB(void *userData, SoSensor *sensor);
+
+    void _Update();
 
     std::vector<SfNoticeMgr::Key> _noticeKeys;
 
@@ -95,10 +118,9 @@ class LegoApp {
     MfVec3d                     _bedSize;
     LegoMainWindow             *_mainWindow;
     std::vector<QWidget*>       _viewerWidgets;
-    std::vector<SoQtViewer*>    _viewers;
-    std::vector<SoSeparator*>   _viewerRoots;
+    SoQtExaminerViewer         *_viewer;
+    SoSeparator                *_viewerRoot;
     LegoUniverse               *_universe;
-    std::vector<_CallbackData*> _cbData;
 
     SoSeparator                *_sceneRoot;
     SoShadowGroup              *_shadowGroup;
@@ -116,9 +138,14 @@ class LegoApp {
     SoCoordinate3              *_brickCoords;
     SoMaterial                 *_brickMaterial;
     SoTextureCoordinate2       *_brickTexCoords;
+    SoVertexProperty           *_brickVP;
     SoIndexedFaceSet           *_brickIFS;
-    SoAlarmSensor              *_alarmSensor;
+    SoAlarmSensor              *_flashAlarm;
     bool                        _flash;
+    bool                        _shiftDown;
+    bool                        _ctrlDown;
+    SoOneShotSensor            *_updateSensor;
+    bool                        _bricksDirty;
 };
 
 #endif // __LEGO_APP_H__

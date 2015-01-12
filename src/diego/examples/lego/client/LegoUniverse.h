@@ -6,14 +6,31 @@
 
 #include <cassert>
 #include <unordered_map>
+#include <unordered_set>
+
+class SoSensor;
+class SoOneShotSensor;
 
 class LegoUniverse {
   public:
-    LegoUniverse(const MfVec3i &gridSize);
+    enum Color {
+        RED,
+        GREEN,
+        BLUE,
+        YELLOW,
+        WHITE,
+        NUM_COLORS,
+    };
+
+    static MfVec3f COLORS[NUM_COLORS];
+
+    typedef std::unordered_set<uint64_t> SelectionMap;
+
+    LegoUniverse(const MfVec3i &gridMin, const MfVec3i &gridMax);
 
     ~LegoUniverse();
 
-    void Clear();
+    void NewUniverse();
 
     uint64_t GetID() const {
         return _id;
@@ -28,6 +45,8 @@ class LegoUniverse {
     LegoTransactionMgr * GetTransactionMgr() {
         return &_xaMgr;
     }
+
+    bool IsValid(const LegoOp &op);
 
     bool ProcessOp(const std::string &op);
 
@@ -50,10 +69,32 @@ class LegoUniverse {
     // Restore from snap shot
     void Restore();
 
+    LegoBrick * GetBrick(const MfVec3d &point);
+
+    void Select(LegoBrick *brick);
+
+    void ClearSelection();
+
+    const SelectionMap & GetSelection() const {
+        return _selection;
+    }
+
+    void ModifyColorForSelectedBricks(Color color);
+
+    void ModifyPositionForSelectedBricks(const MfVec3i &delta);
+
+    void SetGravityEnabled(bool enabled);
+
+    bool IsGravityEnabled() const {
+        return _gravity;
+    }
+
   private:
     friend class LegoTransactionMgr;
 
     typedef std::unordered_map<uint64_t, LegoBrick*> _BrickMap;
+
+    void _Clear();
 
     void _CreateBrick(const MfVec3i &position,
                       const MfVec3i &size,
@@ -61,11 +102,19 @@ class LegoUniverse {
                       const MfVec3f &color);
 
     void _WriteGrid(const MfVec3i &pos, uint64_t brickID) {
-        _grid[_GetIndex(pos)] = brickID;
+        size_t index = _GetIndex(pos);
+        if (index != size_t(-1)) {
+            _grid[index] = brickID;
+        }
     }
 
     uint64_t _ReadGrid(const MfVec3i &pos) const {
-        return _grid[_GetIndex(pos)];
+        size_t index = _GetIndex(pos);
+        if (index == size_t(-1)) {
+            return size_t(-1);
+        } else {
+            return _grid[index];
+        }
     }
 
     inline size_t _GetIndex(const MfVec3i &pos) const {
@@ -81,9 +130,21 @@ class LegoUniverse {
         }
     }
 
-    bool _IsValid(const LegoOp &op);
-
     void _RecordBrick(LegoBrick *brick);
+
+    void _DestroyBrick(LegoBrick *brick);
+
+    void _WriteBrick(const MfVec3i &position, 
+                     const MfVec3i &size, 
+                     uint64_t brickID);
+
+    bool _IsAvailable(const MfVec3i &position,
+                      const MfVec3i &size,
+                      uint64_t brickID = uint64_t(-1));
+
+    static void _ApplyGravityCB(void *userData, SoSensor *sensor);
+
+    void _ApplyGravity();
 
     struct _State {
         _State() : valid(false) {}
@@ -106,6 +167,9 @@ class LegoUniverse {
     _BrickMap _brickMap;
     uint64_t _brickID;
     std::vector<uint64_t> _grid;
+    SelectionMap _selection;
+    SoOneShotSensor *_gravitySensor;
+    bool _gravity;
 
     _State _snapshot;
 };

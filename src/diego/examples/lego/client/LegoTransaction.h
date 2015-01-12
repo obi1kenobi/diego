@@ -9,7 +9,7 @@
 class LegoTransaction
 {
   public:
-    LegoTransaction() {}
+    LegoTransaction() : _id(uint64_t(-1)) {}
 
     // Deserialization constructor.
     LegoTransaction(std::istream &is);
@@ -29,9 +29,18 @@ class LegoTransaction
         _ops.clear();
     }
 
+    void SetID(uint64_t id) {
+        _id = id;
+    }
+
+    uint64_t GetID() const {
+        return _id;
+    }
+
     void Serialize(std::ostream &os) const;
 
   private:
+    uint64_t _id;
     std::vector<LegoOp> _ops;
 };
 
