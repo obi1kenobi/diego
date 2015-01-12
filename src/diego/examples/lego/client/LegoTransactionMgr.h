@@ -30,8 +30,12 @@ class LegoTransactionMgr {
 
     void CloseTransaction();
 
+    // If there is a transaction open, the op will get added to it.
+    // Otherwise, we wrap the op in its own transaction and send it to the
+    // server.
     bool ExecuteOp(const LegoOp &op);
 
+    // Sync up and see if anything has happened since the last poll.
     void CatchupWithServer();
 
     const std::vector<LegoTransaction> & GetLog() const {

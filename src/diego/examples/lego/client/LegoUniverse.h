@@ -5,7 +5,6 @@
 #include "LegoTransactionMgr.h"
 
 #include <cassert>
-#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 

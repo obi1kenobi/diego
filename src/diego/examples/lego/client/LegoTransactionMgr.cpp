@@ -28,6 +28,7 @@ LegoTransactionMgr::LegoTransactionMgr(LegoUniverse *universe) :
     _dispatcher(&LegoTransactionMgr::_Dispatch, this),
     _catchup(false)
 {
+    // Client id for at-most-once
     srand48(time(NULL));
     _clientID = lrand48();
 }
@@ -91,17 +92,12 @@ LegoTransactionMgr::ExecuteOp(const LegoOp &op)
 bool
 LegoTransactionMgr::_ExecuteXa(const LegoTransaction &xa)
 {
-    // std::cerr << "INFO: Executing xa\n";
-
     if (xa.GetOps().empty()) {
-        // std::cerr << "INFO: EMPTY!\n";
         return false;
     }
 
     // Send transaction to server
-    // std::cerr << "INFO: Sending to sever\n";
     std::string response = _SendToServer(xa);
-    // std
 
     if (response.empty()) {
         return false;
@@ -154,11 +150,9 @@ LegoTransactionMgr::_SendToServer(const LegoTransaction &xa)
 void
 LegoTransactionMgr::_EmitXaPrologue(std::ostream &os)
 {
-    _xaIdLock.lock();
-
     // Assign transaction id
+    _xaIdLock.lock();
     uint64_t xaID = _xaIds;
-
     _xaIdLock.unlock();
 
     int64_t clientID = _clientID;
@@ -212,6 +206,7 @@ LegoTransactionMgr::_ParseResponse(std::istream &is,
         is >> recXaID;
         SfDPrintf(2, "XaID: %d\n", recXaID);
 
+        // Parse transaction id
         if (recXaID >= _xaIds) {
             _xaIdLock.lock();
             _xaIds = recXaID + 1;
@@ -446,7 +441,6 @@ LegoTransactionMgr::_Dispatch()
             _lock.lock();
             if (!_queue.empty()) {
                 LegoTransaction xa = _queue.front();
-                // std::cerr << "INFO: Pulling an xa with " << xa.GetOps().size() << "ops \n";
                 _queue.pop_front();
                 _lock.unlock();
                 if (_IsValid(xa)) {

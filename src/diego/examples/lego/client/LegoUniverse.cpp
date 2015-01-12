@@ -370,6 +370,7 @@ LegoUniverse::NewUniverse()
     _xaMgr.OpenTransaction();
 
     // Have to copy container because destroy will end up modifying _bricks
+    // as a side effect of processing the resulting transaction.
     auto bricks = _bricks;
     for (auto *brick : bricks) {
         brick->Destroy();
@@ -410,6 +411,7 @@ LegoUniverse::_ApplyGravity()
         brick->ResetMark();
     }
 
+    // Animate bricks; only move each brick one step.
     bool moves;
     do {
         moves = false;
